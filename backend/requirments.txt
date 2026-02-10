@@ -1,0 +1,9 @@
+fastapi==0.109.0
+uvicorn
+pandas
+scikit-learn
+xgboost
+python-dotenv
+requests
+joblib==1.3.2
+scikit-learn==1.7.2
