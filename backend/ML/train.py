@@ -8,9 +8,7 @@ import os
 
 def train_risk_model(data_path, model_save_path):
     # 1. Load the Indian Metro Accident Dataset
-    if not os.path.exists(data_path):
-        raise FileNotFoundError(f"Could not find data at {data_path}")
-    df = pd.read_csv(data_path)
+    df = pd.read_csv(r"D:\final_merged_accidents.csv")
     
     # 2. Feature Engineering: Extracting temporal patterns unique to India
     # (e.g., Night driving vs. Monsoon months)
@@ -54,25 +52,25 @@ def train_risk_model(data_path, model_save_path):
     joblib.dump(le_road, os.path.join(model_save_path, 'le_road.pkl'))
     
     print(f"Model and Encoders saved to {model_save_path}")
-    print(f"Model Performance Score: {model.score(X_test, y_test):.4f}")
+    print(f"Model Performance Score: {model.score(X_test, y_test):2%}")
 
 # if __name__ == "__main__":
 #     # Point to your local paths
 #     DATA_FILE = '../Data/processed/clean.csv' 
 #     MODEL_DIR = '../app/models/'
 #     train_risk_model(DATA_FILE, MODEL_DIR)
-if __name__ == "__main__":
-    # 1. Get the path of the current script (backend/ML/train_model.py)
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# if __name__ == "__main__":
+#     # 1. Get the path of the current script (backend/ML/train_model.py)
+#     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    # 2. Point to the CSV file (it's up two levels from backend/ML/)
-    # Adjusted to point to the file you uploaded
-    DATA_FILE = os.path.join(BASE_DIR, "../../india_metro_accidents_2000.csv")
+#     # 2. Point to the CSV file (it's up two levels from backend/ML/)
+#     # Adjusted to point to the file you uploaded
+#     DATA_FILE = os.path.join(BASE_DIR, "../../india_metro_accidents_2000.csv")
 
-    # 3. Point to the models folder (one level up, then into app/models)
-    MODEL_DIR = os.path.join(BASE_DIR, "../app/models/")
+#     # 3. Point to the models folder (one level up, then into app/models)
+#     MODEL_DIR = os.path.join(BASE_DIR, "../app/models/")
 
-    print(f"Reading from: {os.path.abspath(DATA_FILE)}")
-    print(f"Saving to: {os.path.abspath(MODEL_DIR)}")
+#     print(f"Reading from: {os.path.abspath(DATA_FILE)}")
+#     print(f"Saving to: {os.path.abspath(MODEL_DIR)}")
 
-    train_risk_model(DATA_FILE, MODEL_DIR)
+    # train_risk_model(DATA_FILE, MODEL_DIR)

@@ -6,6 +6,7 @@ venv/
 backend/Data/raw/* # Don't upload 300MB+ raw Kaggle data
 backend/app/models/*.pkl # Keep models small or use Git LFS
 
+
 # JavaScript (Frontend)
 node_modules/
 dist/
