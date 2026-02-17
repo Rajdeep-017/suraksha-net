@@ -1,0 +1,18 @@
+# Python (Backend)
+__pycache__/
+*.py[cod]
+venv/
+.env
+backend/Data/raw/* # Don't upload 300MB+ raw Kaggle data
+backend/app/models/*.pkl # Keep models small or use Git LFS
+
+
+# JavaScript (Frontend)
+node_modules/
+dist/
+.DS_Store
+frontend/.env
+
+# Large Files
+*.zip
+*.csv
