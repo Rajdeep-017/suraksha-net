@@ -76,59 +76,145 @@
 #     port = int(os.getenv("PORT", 8000))
 #     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
 
-from fastapi import FastAPI
+# from fastapi import FastAPI
+# from fastapi.middleware.cors import CORSMiddleware
+# import uvicorn
+# import os
+# from dotenv import load_dotenv
+
+# # 1. Cleaned Import: Only one way to import routes
+# # We use 'from app.api import routes' if running from the /backend directory
+# try:
+#     from app.api import routes 
+# except ImportError:
+#     from .api import routes
+
+# load_dotenv()
+
+# app = FastAPI(
+#     title="Suraksha-Net AI",
+#     description="AI-powered Road Safety & Navigation System for India",
+#     version="1.0.0"
+# )
+
+# # --------------------------------------------------
+# # 1. CORS Configuration
+# # --------------------------------------------------
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"], 
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # --------------------------------------------------
+# # 2. Include Routing
+# # --------------------------------------------------
+# app.include_router(routes.router, prefix="/api")
+
+# @app.get("/")
+# async def health_check():
+#     # Adding model check to health status
+#     model_exists = os.path.exists(os.path.join("app", "models", "severity_model.pkl"))
+#     return {
+#         "status": "online",
+#         "service": "Suraksha-Net Backend",
+#         "model_loaded": model_exists,
+#         "model_version": "v1_XGBoost"
+#     }
+
+# # --------------------------------------------------
+# # 3. Execution Logic
+# # --------------------------------------------------
+# if __name__ == "__main__":
+#     # Note: When using uvicorn.run("main:app"), 
+#     # it expects main.py to be in the folder you are running from.
+#     port = int(os.getenv("PORT", 8000))
+#     uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import os
-from dotenv import load_dotenv
+from pydantic import BaseModel
+import pandas as pd
+import numpy as np
+import requests
 
-# 1. Cleaned Import: Only one way to import routes
-# We use 'from app.api import routes' if running from the /backend directory
-try:
-    from app.api import routes 
-except ImportError:
-    from .api import routes
+app = FastAPI()
 
-load_dotenv()
-
-app = FastAPI(
-    title="Suraksha-Net AI",
-    description="AI-powered Road Safety & Navigation System for India",
-    version="1.0.0"
-)
-
-# --------------------------------------------------
-# 1. CORS Configuration
-# --------------------------------------------------
+# 1. Enable CORS so your React app can talk to Python
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=True,
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --------------------------------------------------
-# 2. Include Routing
-# --------------------------------------------------
-app.include_router(routes.router, prefix="/api")
+# Load the dataset you uploaded
+df = pd.read_csv(r'D:\final_merged_accidents.csv')
 
-@app.get("/")
-async def health_check():
-    # Adding model check to health status
-    model_exists = os.path.exists(os.path.join("app", "models", "severity_model.pkl"))
+class RouteRequest(BaseModel):
+    start: str
+    end: str
+
+def get_coords(location_name: str):
+    """Converts a name like 'Pune Station' to Lat/Long using OpenStreetMap"""
+    url = f"https://nominatim.openstreetmap.org/search?q={location_name}&format=json&limit=1"
+    headers = {'User-Agent': 'SurakshaNet-App'}
+    response = requests.get(url, headers=headers).json()
+    if response:
+        return float(response[0]['lat']), float(response[0]['lon'])
+    return None
+
+@app.post("/api/analyze-route")
+async def analyze_route(request: RouteRequest):
+    # 1. Convert names to Coordinates
+    start_coords = get_coords(request.start)
+    end_coords = get_coords(request.end)
+
+    if not start_coords or not end_coords:
+        raise HTTPException(status_code=400, detail="Could not find location coordinates")
+
+    # 2. Find real accidents from your CSV near the route
+    # (Simple logic: find accidents within the bounding box of the start/end)
+    min_lat, max_lat = sorted([start_coords[0], end_coords[0]])
+    min_lng, max_lng = sorted([start_coords[1], end_coords[1]])
+    
+    # Filter dataset for points near this route
+    mask = (df['Latitude'] >= min_lat - 0.1) & (df['Latitude'] <= max_lat + 0.1) & \
+           (df['Longitude'] >= min_lng - 0.1) & (df['Longitude'] <= max_lng + 0.1)
+    nearby_accidents = df[mask].nlargest(10, 'Risk_Score')
+
+    # 3. Format response for your Frontend
+    accident_points = []
+    high_risk_locs = []
+    
+    for i, row in nearby_accidents.iterrows():
+        accident_points.append({
+            "id": str(i),
+            "lat": row['Latitude'],
+            "lng": row['Longitude'],
+            "severity": "high" if row['Risk_Score'] > 15 else "medium",
+            "accidents": 1,
+            "description": f"Risk Score: {row['Risk_Score']} in {row['City']}"
+        })
+        
+        high_risk_locs.append({
+            "id": str(i),
+            "name": f"Area near {row['City']}",
+            "riskLevel": "high" if row['Risk_Score'] > 15 else "medium",
+            "accidents": int(row['Risk_Score']),
+            "distance": "Nearby"
+        })
+
     return {
-        "status": "online",
-        "service": "Suraksha-Net Backend",
-        "model_loaded": model_exists,
-        "model_version": "v1_XGBoost"
+        "safety_score": max(0, 100 - int(nearby_accidents['Risk_Score'].mean() or 0)),
+        "risk_level": "High" if len(nearby_accidents) > 5 else "Safe",
+        "total_accidents": len(nearby_accidents),
+        "accident_points": accident_points,
+        "high_risk_locations": high_risk_locs
     }
 
-# --------------------------------------------------
-# 3. Execution Logic
-# --------------------------------------------------
 if __name__ == "__main__":
-    # Note: When using uvicorn.run("main:app"), 
-    # it expects main.py to be in the folder you are running from.
-    port = int(os.getenv("PORT", 8000))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
