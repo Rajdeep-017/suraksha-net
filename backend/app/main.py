@@ -139,6 +139,9 @@ from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import requests
+import uvicorn
+import os
+from dotenv import load_dotenv
 
 app = FastAPI()
 
@@ -165,7 +168,18 @@ def get_coords(location_name: str):
     if response:
         return float(response[0]['lat']), float(response[0]['lon'])
     return None
-
+def get_route_details(start_coords, end_coords):
+    """Fetches road path and travel time from OSRM"""
+    url = f"http://router.project-osrm.org/route/v1/driving/{start_coords[1]},{start_coords[0]};{end_coords[1]},{end_coords[0]}?overview=full&geometries=geojson"
+    response = requests.get(url).json()
+    
+    if response['code'] == 'Ok':
+        route = response['routes'][0]
+        # OSRM returns [lng, lat], we need [lat, lng] for Leaflet
+        geometry = [[p[1], p[0]] for p in route['geometry']['coordinates']]
+        duration_mins = round(route['duration'] / 60) # Convert seconds to minutes
+        return geometry, duration_mins
+    return [], 0
 @app.post("/api/analyze-route")
 async def analyze_route(request: RouteRequest):
     # 1. Convert names to Coordinates
@@ -174,7 +188,7 @@ async def analyze_route(request: RouteRequest):
 
     if not start_coords or not end_coords:
         raise HTTPException(status_code=400, detail="Could not find location coordinates")
-
+    route_geometry, travel_time = get_route_details(start_coords, end_coords)
     # 2. Find real accidents from your CSV near the route
     # (Simple logic: find accidents within the bounding box of the start/end)
     min_lat, max_lat = sorted([start_coords[0], end_coords[0]])
@@ -206,14 +220,36 @@ async def analyze_route(request: RouteRequest):
             "accidents": int(row['Risk_Score']),
             "distance": "Nearby"
         })
-
+        avg_risk = nearby_accidents['Risk_Score'].mean() if not nearby_accidents.empty else 0
+    score = max(0, 100 - int(avg_risk))
+    level = "High" if len(nearby_accidents) > 5 else "Safe"
     return {
-        "safety_score": max(0, 100 - int(nearby_accidents['Risk_Score'].mean() or 0)),
-        "risk_level": "High" if len(nearby_accidents) > 5 else "Safe",
-        "total_accidents": len(nearby_accidents),
+        "safety_score": score,
+        "risk_level": level,
+        "start_coords": start_coords, # [lat, lng]
+        "end_coords": end_coords,     # [lat, lng]
+        "route_geometry": route_geometry, # Full list of road points
+        "travel_time": travel_time,
         "accident_points": accident_points,
-        "high_risk_locations": high_risk_locs
+        "high_risk_locations": high_risk_locs,
+        "total_accidents": len(nearby_accidents)
     }
+
+    # return {
+    #     "safety_score": max(0, 100 - int(nearby_accidents['Risk_Score'].mean() or 0)),
+    #     "risk_level": "High" if len(nearby_accidents) > 5 else "Safe",
+    #     "total_accidents": len(nearby_accidents),
+    #     "accident_points": accident_points,
+    #     "high_risk_locations": high_risk_locs
+    # }
+    # return {
+    #     "safety_score": score,
+    #     "risk_level": level,
+    #     "start_coords": [start_lat, start_lng], # The Map uses this for the start of the path
+    #     "end_coords": [end_lat, end_lng],     # The Map uses this for the end of the path
+    #     "accident_points": accident_points,   # These are the Red Dots
+    #     "total_accidents": len(accident_points)
+    # }
 
 if __name__ == "__main__":
     import uvicorn

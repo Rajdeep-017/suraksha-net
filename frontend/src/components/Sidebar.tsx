@@ -55,6 +55,7 @@ interface SidebarProps {
   loading: boolean;
   score?: number;
   level?: string;
+  travelTime?: number;
 }
 
 export const Sidebar = ({ 
@@ -65,7 +66,8 @@ export const Sidebar = ({
   onAnalyze, 
   loading, 
   score, 
-  level 
+  level,
+  travelTime 
 }: SidebarProps) => {
   return (
     <div className="w-96 h-full bg-slate-900 border-r border-white/10 p-6 flex flex-col gap-6 z-10 shadow-2xl">
@@ -75,6 +77,16 @@ export const Sidebar = ({
         </div>
         <h1 className="text-xl font-black text-white italic tracking-tighter">SURAKSHA-NET</h1>
       </div>
+      {travelTime && (
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+            Est. Travel Time
+          </p>
+          <p className="text-2xl font-black text-white">
+            {Math.floor(travelTime / 60)}h {travelTime % 60}m
+          </p>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="space-y-2">

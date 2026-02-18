@@ -49,4 +49,8 @@ export interface SafetyResponse {
   total_accidents: number;
   high_risk_locations: RiskLocation[];
   accident_points: AccidentLocation[];
+  start_coords?: [number, number]; 
+  end_coords?: [number, number];
+  route_geometry?: [number, number][]; 
+  travel_time?: number;
 }
