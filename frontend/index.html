@@ -8,6 +8,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Mappls JS SDK injected using Vite env key -->
+    <script type="module">
+      const key = import.meta.env.VITE_MAPPLS_JS_KEY;
+      if (key) {
+        const s = document.createElement('script');
+        s.src = `https://apis.mappls.com/advancedmaps/v1/${key}/map_sdk.js`;
+        s.async = true;
+        document.head.appendChild(s);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

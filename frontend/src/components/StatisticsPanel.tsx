@@ -1,13 +1,13 @@
 // 1. Removed unused 'React' import to fix TS6133
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer 
+import {
+  PieChart, Pie, Cell
 } from 'recharts';
-import { 
-  AlertTriangle, 
-  Clock, 
-  ShieldAlert, 
-  MapPin, 
-  TrendingDown 
+import {
+  AlertTriangle,
+  Clock,
+  ShieldAlert,
+  MapPin,
+  TrendingDown
 } from 'lucide-react';
 
 interface StatisticsPanelProps {
@@ -23,38 +23,39 @@ interface StatisticsPanelProps {
 const CircularSafetyMeter = ({ score }: { score: number }) => {
   const chartData = [{ value: score }, { value: 100 - score }];
   const getColor = (s: number) => {
-    if (s > 70) return '#10b981'; 
-    if (s > 40) return '#f59e0b'; 
+    if (s > 70) return '#10b981';
+    if (s > 40) return '#f59e0b';
     return '#ef4444';
   };
 
   return (
-    <div className="relative w-full h-40 flex flex-col items-center justify-center">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="80%"
-            innerRadius={60}
-            outerRadius={80}
-            startAngle={180}
-            endAngle={0}
-            dataKey="value"
-            stroke="none"
-          >
-            <Cell fill={getColor(score)} />
-            <Cell fill="rgba(255,255,255,0.05)" />
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="absolute top-[55%] text-center">
-        <span className="text-4xl font-black text-white">{score}%</span>
+    // Fixed pixel dimensions — eliminates the Recharts -1 width/height warning
+    // that occurs when ResponsiveContainer is inside a flex child with no intrinsic size.
+    <div className="relative flex items-center justify-center" style={{ width: 200, height: 120 }}>
+      <PieChart width={200} height={120}>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="90%"
+          innerRadius={55}
+          outerRadius={72}
+          startAngle={180}
+          endAngle={0}
+          dataKey="value"
+          stroke="none"
+        >
+          <Cell fill={getColor(score)} />
+          <Cell fill="rgba(255,255,255,0.05)" />
+        </Pie>
+      </PieChart>
+      <div className="absolute bottom-0 text-center pb-1">
+        <span className="text-3xl font-black text-white">{score}%</span>
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Safety Index</p>
       </div>
     </div>
   );
 };
+
 
 export const StatisticsPanel = ({ data }: StatisticsPanelProps) => {
   if (!data) return null;
@@ -65,9 +66,9 @@ export const StatisticsPanel = ({ data }: StatisticsPanelProps) => {
   return (
     <div className="w-full bg-slate-900/90 backdrop-blur-2xl border-t border-white/10 p-6">
       <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center gap-10">
-        
+
         <div className="w-full lg:w-1/5 flex justify-center border-b lg:border-b-0 lg:border-r border-white/5 pb-6 lg:pb-0 lg:pr-10">
-          <CircularSafetyMeter score={data.safety_score} />
+          <CircularSafetyMeter score={data.safety_score || 0} />
         </div>
 
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
@@ -77,7 +78,7 @@ export const StatisticsPanel = ({ data }: StatisticsPanelProps) => {
               <span className="text-[10px] font-bold uppercase tracking-widest">Risk Level</span>
             </div>
             <p className={`text-2xl font-black ${data.risk_level === 'High' ? 'text-red-500' : 'text-emerald-500'}`}>
-              {data.risk_level.toUpperCase()}
+              {data.risk_level?.toUpperCase() || "N/A"}
             </p>
           </div>
 
@@ -106,8 +107,8 @@ export const StatisticsPanel = ({ data }: StatisticsPanelProps) => {
               <span className="text-[10px] font-bold uppercase tracking-widest">Advice</span>
             </div>
             <p className="text-xs font-medium text-slate-400 leading-tight">
-              {data.safety_score < 50 
-                ? "Caution: High risk detected. Night travel not recommended." 
+              {data.safety_score < 50
+                ? "Caution: High risk detected. Night travel not recommended."
                 : "Standard safety conditions. Maintain highway speeds."}
             </p>
           </div>
@@ -119,7 +120,7 @@ export const StatisticsPanel = ({ data }: StatisticsPanelProps) => {
             <span className="text-[10px] font-bold text-white uppercase tracking-widest">Critical Hotspots</span>
           </div>
           <div className="space-y-3">
-            {data.high_risk_locations.slice(0, 2).map((loc, i) => (
+            {(data.high_risk_locations?.slice(0, 2) || []).map((loc, i) => (
               <div key={i} className="flex justify-between items-center text-xs">
                 <span className="text-slate-400 truncate w-32">{loc.name}</span>
                 <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-500 font-bold border border-red-500/20">

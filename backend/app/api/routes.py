@@ -1,166 +1,115 @@
-# import os
-# import joblib
-# import pandas as pd
-# import datetime
-# from fastapi import APIRouter, HTTPException
-# from pydantic import BaseModel, Field, ConfigDict
-
-# router = APIRouter()
-
-# # --- PATH RESOLUTION ---
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# MODEL_DIR = os.path.join(BASE_DIR, "models")
-
-# def load_artifact(filename):
-#     path = os.path.join(MODEL_DIR, filename)
-#     if not os.path.exists(path):
-#         raise FileNotFoundError(f"Missing ML artifact: {path}")
-#     return joblib.load(path)
-
-# # Load artifacts
-# try:
-#     LE_CITY = load_artifact("le_city.pkl")
-#     LE_WEATHER = load_artifact("le_weather.pkl")
-#     LE_ROAD = load_artifact("le_road.pkl")
-#     MODEL = load_artifact("risk_model.pkl")
-# except Exception as e:
-#     print(f"ERROR: Model loading failed. {e}")
-
-# class RiskRequest(BaseModel):
-#     # Field aliases solve the '422 Unprocessable Entity' by accepting both cases
-#     latitude: float = Field(..., validation_alias="Latitude", serialization_alias="latitude")
-#     longitude: float = Field(..., validation_alias="Longitude", serialization_alias="longitude")
-#     city: str = Field(..., validation_alias="City", serialization_alias="city")
-#     weather: str = Field(..., validation_alias="Weather", serialization_alias="weather")
-#     road_condition: str = Field(..., validation_alias="Road_Condition", serialization_alias="road_condition")
-
-#     # Pydantic V2 config to allow both alias and field name
-#     model_config = ConfigDict(populate_by_name=True)
-
-# @router.post("/predict-risk")
-# async def predict_risk(data: RiskRequest):
-#     try:
-#         # 1. Feature Extraction
-#         now = datetime.datetime.now()
-#         hour = now.hour
-#         month = now.month
-#         day_of_week = now.weekday()
-
-#         # 2. Categorical Encoding
-#         try:
-#             city_enc = LE_CITY.transform([data.city])[0]
-#             weather_enc = LE_WEATHER.transform([data.weather])[0]
-#             road_enc = LE_ROAD.transform([data.road_condition])[0]
-#         except ValueError as e:
-#             raise HTTPException(status_code=400, detail=f"Data Mismatch: {str(e)}. Check your CSV categories.")
-
-#         # 3. Model Inference
-#         features = pd.DataFrame([[
-#             data.latitude, data.longitude, city_enc, 
-#             weather_enc, road_enc, hour, month, day_of_week
-#         ]], columns=['Latitude', 'Longitude', 'City_Encoded', 
-#                      'Weather_Encoded', 'Road_Condition_Encoded', 
-#                      'Hour', 'Month', 'DayOfWeek'])
-
-#         ml_prediction = MODEL.predict(features)[0]
-        
-#         # 4. Proactive Risk Intelligence (Hybrid Logic)
-#         # We manually boost scores for high-danger Indian road scenarios
-#         risk_score = float(ml_prediction)
-        
-#         if data.weather in ["Foggy", "Rainy"]: 
-#             risk_score += 2.0
-#         if 23 <= hour or hour <= 5: 
-#             risk_score += 1.5  # Night-time hazard
-#         if "Under Construction" in data.road_condition or "Potholes" in data.road_condition:
-#             risk_score += 2.0
-
-#         # Clamp score between 1 and 10
-#         final_score = max(1, min(10, round(risk_score, 1)))
-
-#         return {
-#             "status": "success",
-#             "risk_score": final_score,
-#             "risk_level": "High" if final_score > 7 else "Moderate" if final_score > 4 else "Low",
-#             "metadata": {
-#                 "city": data.city,
-#                 "hour": f"{hour}:00",
-#                 "is_monsoon_month": month in [6, 7, 8, 9]
-#             }
-#         }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
-# import joblib
-# import pandas as pd
-# import numpy as np
-# from fastapi import APIRouter
-# from pydantic import BaseModel
-
-# router = APIRouter()
-
-# # Load the "Best" artifacts
-# MODEL = joblib.load("app/models/risk_model.pkl")
-# SCALER = joblib.load("app/models/scaler.pkl")
-# CITY_MAP = joblib.load("app/models/city_risk_map.pkl")
-
-# class PredictRequest(BaseModel):
-#     latitude: float
-#     longitude: float
-#     city: str
-#     hour: int
-
-# @router.post("/predict-point")
-# async def predict_point(data: PredictRequest):
-#     # 1. Feature Engineering (Match the train.py logic)
-#     hour_sin = np.sin(2 * np.pi * data.hour / 23.0)
-#     hour_cos = np.cos(2 * np.pi * data.hour / 23.0)
-#     city_risk = CITY_MAP.get(data.city, 5.0) # Fallback to average
-    
-#     # 2. Create Feature Array
-#     # Must be in the EXACT same order as 'features' list in train.py
-#     features = np.array([[
-#         data.latitude, data.longitude, 
-#         hour_sin, hour_cos, 
-#         1 if (data.hour >= 22 or data.hour <= 5) else 0, # Is_Night
-#         0, # Is_Highway (Placeholder or logic)
-#         0, # Night_Highway interaction
-#         city_risk
-#     ]])
-    
-#     # 3. Scale and Predict
-#     features_scaled = SCALER.transform(features)
-#     prediction = MODEL.predict(features_scaled)[0]
-    
-#     return {
-#         "risk_level": int(prediction), # 0: Low, 1: Med, 2: High
-#         "label": "High" if prediction == 2 else "Moderate" if prediction == 1 else "Low"
-#     }
-
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from typing import List, Optional
+import os
 import joblib
-import pandas as pd
 import numpy as np
+from typing import Optional
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
 from app.services.navigation import get_safer_route
+from app.services.chatbot import chat as groq_chat
 
 router = APIRouter()
 
 # --------------------------------------------------
 # 1. Load ML Artifacts
 # --------------------------------------------------
+MODEL = None
+ENCODERS = None
+SCALER = None
+KMEANS = None
+SEVERITY_LE = None
+FEATURE_CONFIG = None
+
+_MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
+
 try:
-    MODEL = joblib.load("app/models/severity_model.pkl")
-    ENCODERS = joblib.load("app/models/encoders.pkl")
-    SCALER = joblib.load("app/models/coord_scaler.pkl")
-    KMEANS = joblib.load("app/models/kmeans_hotspots.pkl")
-    SEVERITY_LE = joblib.load("app/models/severity_encoder.pkl")
+    MODEL = joblib.load(os.path.join(_MODEL_DIR, "severity_model.pkl"))
+    ENCODERS = joblib.load(os.path.join(_MODEL_DIR, "encoders.pkl"))
+    SCALER = joblib.load(os.path.join(_MODEL_DIR, "coord_scaler.pkl"))
+    KMEANS = joblib.load(os.path.join(_MODEL_DIR, "kmeans_hotspots.pkl"))
+    SEVERITY_LE = joblib.load(os.path.join(_MODEL_DIR, "severity_encoder.pkl"))
+    try:
+        FEATURE_CONFIG = joblib.load(os.path.join(_MODEL_DIR, "feature_config.pkl"))
+    except Exception:
+        FEATURE_CONFIG = None
+    print("[OK] ML models loaded successfully.")
 except Exception as e:
-    print(f"⚠️ Warning: Model files not found. Run train.py first. Error: {e}")
+    print(f"[WARN] ML model files not found. Run train.py first. Error: {e}")
+
 
 # --------------------------------------------------
-# 2. Request/Response Models (Schemas)
+# Inference helper: build 15-feature vector
+# --------------------------------------------------
+# Lookup maps matching train.py
+_ROAD_RISK = {"Slippery":4, "Potholed":3, "Under Construction":3, "Wet":2, "Dry":1, "Good":1}
+_TIME_RISK = {"Late Night":3, "Night":2, "Morning Rush":2, "Evening Rush":2, "Afternoon":1, "Midday":1}
+_WEATHER_SEVERITY = {"Clear":1, "Cloudy":1, "Rainy":3, "Foggy":2, "Stormy":4, "Hail":4, "Snowy":3}
+
+def _safe_encode(encoder_key: str, value: str) -> int:
+    """Encode a category with fallback to 0 for unknown labels."""
+    try:
+        return int(ENCODERS[encoder_key].transform([value])[0])
+    except (ValueError, KeyError):
+        return 0
+
+def _get_time_bin(hour: int) -> str:
+    """Map hour → Time_Bin label matching the training data."""
+    if 6 <= hour < 10:   return "Morning Rush"
+    if 10 <= hour < 12:  return "Midday"
+    if 12 <= hour < 16:  return "Afternoon"
+    if 16 <= hour < 20:  return "Evening Rush"
+    if 20 <= hour < 23:  return "Night"
+    return "Late Night"
+
+def _get_day_night(hour: int) -> str:
+    return "Nighttime" if hour >= 20 or hour < 6 else "Daytime"
+
+def build_feature_vector(
+    weather: str = "Clear",
+    road_condition: str = "Dry",
+    hour: int = 12,
+) -> np.ndarray:
+    """
+    Builds the 15-feature vector matching train.py's FEATURES list:
+        Weather_enc, Road_Condition_enc, Time_Bin_enc, Day_Night_enc,
+        Weather_Severity, Traffic_Density, road_risk_num, time_risk_num,
+        is_night, weather_road_risk, casualty_severity_idx, total_casualties,
+        Fatalities, Serious_Injuries, Minor_Injuries
+
+    Casualty fields default to 0 (unknown at prediction time).
+    """
+    time_bin   = _get_time_bin(hour)
+    day_night  = _get_day_night(hour)
+
+    weather_enc        = _safe_encode("Weather", weather)
+    road_condition_enc = _safe_encode("Road_Condition", road_condition)
+    time_bin_enc       = _safe_encode("Time_Bin", time_bin)
+    day_night_enc      = _safe_encode("Day_Night", day_night)
+
+    weather_severity = _WEATHER_SEVERITY.get(weather, 2)
+    traffic_density  = 5  # default medium (not available at inference)
+    road_risk_num    = _ROAD_RISK.get(road_condition, 2)
+    time_risk_num    = _TIME_RISK.get(time_bin, 1)
+    is_night         = 1 if day_night == "Nighttime" else 0
+    weather_road_risk = weather_severity * road_risk_num
+
+    # Casualty features — unknown at prediction time, default to 0
+    casualty_severity_idx = 0
+    total_casualties      = 0
+    fatalities            = 0
+    serious_injuries      = 0
+    minor_injuries        = 0
+
+    return np.array([[
+        weather_enc, road_condition_enc, time_bin_enc, day_night_enc,
+        weather_severity, traffic_density, road_risk_num, time_risk_num,
+        is_night, weather_road_risk, casualty_severity_idx, total_casualties,
+        fatalities, serious_injuries, minor_injuries,
+    ]])
+
+
+# --------------------------------------------------
+# 2. Request Schemas
 # --------------------------------------------------
 class NavigationRequest(BaseModel):
     origin_lat: float
@@ -169,6 +118,7 @@ class NavigationRequest(BaseModel):
     dest_lon: float
     city: str
 
+
 class RiskRequest(BaseModel):
     lat: float
     lon: float
@@ -176,55 +126,96 @@ class RiskRequest(BaseModel):
     weather: Optional[str] = "Clear"
     road_condition: Optional[str] = "Dry"
 
+
 # --------------------------------------------------
-# 3. API Endpoints
+# 3. Endpoints
 # --------------------------------------------------
 
-@router.get("/")
-async def root():
-    return {"message": "Suraksha-Net AI Backend is Online"}
+@router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "model_loaded": MODEL is not None,
+    }
+
 
 @router.post("/predict-risk")
 async def predict_risk(data: RiskRequest):
-    """Predicts risk for a single point (used for real-time alerts)."""
+    """Predicts accident risk for a single coordinate (real-time alerts)."""
+    if MODEL is None or ENCODERS is None or SEVERITY_LE is None:
+        raise HTTPException(
+            status_code=503,
+            detail="ML models are not loaded. Run train.py first to generate model files.",
+        )
     try:
-        # Prepare input matching the train.py features
-        city_enc = ENCODERS["City"].transform([data.city])[0]
-        weather_enc = ENCODERS["Weather"].transform([data.weather])[0]
-        road_enc = ENCODERS["Road_Condition"].transform([data.road_condition])[0]
-        
-        # Scale coordinates
-        coords_scaled = SCALER.transform([[data.lat, data.lon]])
-        hotspot = KMEANS.predict(coords_scaled)[0]
-        
-        # Build feature array
-        features = np.array([[data.lat, data.lon, city_enc, weather_enc, road_enc, 0, 0, 0, 0, hotspot]]) 
-        # Note: Replace 0s with actual hour_sin, hour_cos etc. if used in train.py
-        
+        import datetime
+
+        now  = datetime.datetime.now()
+        hour = now.hour
+
+        features = build_feature_vector(
+            weather=data.weather or "Clear",
+            road_condition=data.road_condition or "Dry",
+            hour=hour,
+        )
+
         prediction = MODEL.predict(features)[0]
         label = SEVERITY_LE.inverse_transform([prediction])[0]
-        
+
+        # Also get probability for the "High" class
+        proba = MODEL.predict_proba(features)[0]
+        try:
+            high_idx = list(SEVERITY_LE.classes_).index("High")
+            risk_pct = float(proba[high_idx])
+        except (ValueError, IndexError):
+            risk_pct = 0.5
+
         return {
             "status": "success",
             "risk_level": label,
-            "risk_score": int(prediction)
+            "risk_score": int(prediction),
+            "risk_probability": round(risk_pct, 4),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/navigate-safe")
 async def navigate_safe(data: NavigationRequest):
-    """Calculates and ranks routes based on safety and distance."""
+    """Calculates and ranks routes by safety score using the Mappls API."""
     try:
         results = get_safer_route(
             data.origin_lat, data.origin_lon,
             data.dest_lat, data.dest_lon,
-            data.city
+            data.city,
         )
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Navigation Service Error: {str(e)}")
 
-@router.get("/health")
-async def health_check():
-    return {"status": "healthy", "model_loaded": MODEL is not None}
+
+# --------------------------------------------------
+# Chat (Groq AI)
+# --------------------------------------------------
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+
+@router.post("/chat")
+async def chat_endpoint(data: ChatRequest):
+    """AI chatbot powered by Groq — road safety questions & route queries."""
+    try:
+        msgs = [{"role": m.role, "content": m.content} for m in data.messages]
+        result = groq_chat(msgs)
+        return {
+            "status": "success",
+            "reply": result["reply"],
+            "route": result.get("route"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,217 +1,226 @@
-// import { useEffect, useRef } from 'react';
-// import L from 'leaflet';
-// import 'leaflet/dist/leaflet.css';
-// import type { AccidentLocation } from '../types/safety';
-
-// interface Props {
-//   accidents: AccidentLocation[];
-//   center?: [number, number];
-// }
-
-// export const RoadSafetyMap = ({ accidents, center = [18.5204, 73.8567] }: Props) => {
-//   const mapRef = useRef<L.Map | null>(null);
-//   const containerRef = useRef<HTMLDivElement>(null);
-
-//   useEffect(() => {
-//     if (!containerRef.current || mapRef.current) return;
-
-//     // Initialize map
-//     mapRef.current = L.map(containerRef.current).setView(center, 13);
-    
-//     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//       attribution: '© OpenStreetMap contributors'
-//     }).addTo(mapRef.current);
-
-//     return () => {
-//       mapRef.current?.remove();
-//       mapRef.current = null;
-//     };
-//   }, [center]);
-
-//   useEffect(() => {
-//     if (!mapRef.current) return;
-
-//     // Clear existing markers
-//     mapRef.current.eachLayer((layer) => {
-//       if (layer instanceof L.CircleMarker) mapRef.current?.removeLayer(layer);
-//     });
-
-//     // Add accident hotspots
-//     accidents.forEach((spot) => {
-//       const color = spot.severity === 'high' ? '#ef4444' : '#eab308';
-      
-//       L.circleMarker([spot.lat, spot.lng], {
-//         radius: Math.min(spot.accidents * 2, 20),
-//         fillColor: color,
-//         color: color,
-//         weight: 1,
-//         opacity: 0.8,
-//         fillOpacity: 0.4,
-//       })
-//       .bindPopup(`<strong>${spot.description}</strong><br/>Accidents: ${spot.accidents}`)
-//       .addTo(mapRef.current!);
-//     });
-//   }, [accidents]);
-
-//   return <div ref={containerRef} className="h-full w-full rounded-none z-0" />;
-// };
-// import { useEffect} from 'react';
-// import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
-
-// // This sub-component handles moving the camera when search results come in
-// function RecenterMap({ accidents }: { accidents: any[] }) {
-//   const map = useMap();
-//   useEffect(() => {
-//     if (accidents.length > 0) {
-//       // Zoom to the first accident found in your dataset
-//       map.setView([accidents[0].lat, accidents[0].lng], 12);
-//     }
-//   }, [accidents, map]);
-//   return null;
-// }
-
-// export const RoadSafetyMap = ({ accidents }: { accidents: any[] }) => {
-//   return (
-//     <MapContainer center={[18.5204, 73.8567]} zoom={11} className="h-full w-full">
-//       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      
-//       <RecenterMap accidents={accidents} />
-
-//       {accidents.map((point) => (
-//         <CircleMarker
-//           key={point.id}
-//           center={[point.lat, point.lng]}
-//           radius={10}
-//           pathOptions={{ 
-//             fillColor: point.severity === 'high' ? '#ef4444' : '#f59e0b',
-//             color: 'white',
-//             weight: 2,
-//             fillOpacity: 0.8 
-//           }}
-//         >
-//           <Popup>
-//             <div className="font-sans">
-//               <p className="font-bold text-red-600">{point.description}</p>
-//               <p className="text-xs text-gray-500">Location: {point.lat}, {point.lng}</p>
-//             </div>
-//           </Popup>
-//         </CircleMarker>
-//       ))}
-//     </MapContainer>
-//   );
-// };
-// import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from 'react-leaflet';
-// import { useEffect } from 'react';
-
-// // Sub-component to handle zooming and fitting the path on screen
-// function MapController({ pathCoords }: { pathCoords: [number, number][] }) {
-//   const map = useMap();
-//   useEffect(() => {
-//     if (pathCoords.length >= 2) {
-//       // Automatically zoom the map so the entire path is visible
-//       map.fitBounds(pathCoords, { padding: [50, 50] });
-//     }
-//   }, [pathCoords, map]);
-//   return null;
-// }
-
-// export const RoadSafetyMap = ({ accidents, startCoord, endCoord }: any) => {
-//   // Create an array for the path line
-//   const pathLine: [number, number][] = (startCoord && endCoord) 
-//     ? [startCoord, endCoord] 
-//     : [];
-
-//   return (
-//     <MapContainer center={[20.5937, 78.9629]} zoom={5} className="h-full w-full">
-//       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      
-//       {/* 1. Draw the Path Line */}
-//       {pathLine.length > 0 && (
-//         <Polyline 
-//           positions={pathLine} 
-//           pathOptions={{ color: '#10b981', weight: 4, opacity: 0.6, dashArray: '10, 10' }} 
-//         />
-//       )}
-
-//       {/* 2. Recentering logic */}
-//       <MapController pathCoords={pathLine} />
-
-//       {/* 3. Your existing Red Dots (Accidents) */}
-//       {accidents.map((point: any) => (
-//         <CircleMarker
-//           key={point.id}
-//           center={[point.lat, point.lng]}
-//           radius={8}
-//           pathOptions={{ fillColor: '#ef4444', color: 'white', weight: 1, fillOpacity: 0.7 }}
-//         >
-//           <Popup>{point.description}</Popup>
-//         </CircleMarker>
-//       ))}
-//     </MapContainer>
-//   );
-// };
-import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from 'react-leaflet';
 import { useEffect } from 'react';
+import {
+  MapContainer,
+  TileLayer,
+  Polyline,
+  CircleMarker,
+  Popup,
+  useMap,
+} from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import type { Segment, AccidentLocation } from '../types/safety';
 
-// Helper to auto-zoom the map when new coordinates arrive
-function ChangeView({ bounds }: { bounds: [number, number][] }) {
+interface NavigateRoute {
+  geometry: [number, number][];
+  risk: number;
+  selected: boolean;
+  name: string;
+  index: number;
+}
+
+interface Props {
+  accidents: AccidentLocation[];
+  segmentedPath?: Segment[];
+  routeGeometry?: [number, number][]; // full road-following path from OSRM
+  center: [number, number];
+  userPosition?: { lat: number; lng: number; accuracy?: number } | null;
+  navigateRoutes?: NavigateRoute[];
+  onSelectRoute?: (index: number) => void;
+}
+
+/**
+ * Flies the map to fit the entire route whenever a new route_geometry arrives.
+ * Falls back to a simple setView when there's no route.
+ */
+function MapController({
+  center,
+  routeGeometry,
+  navigateRoutes,
+}: {
+  center: [number, number];
+  routeGeometry?: [number, number][];
+  navigateRoutes?: NavigateRoute[];
+}) {
   const map = useMap();
+
   useEffect(() => {
-    if (bounds.length >= 2) {
-      map.fitBounds(bounds, { padding: [50, 50] });
+    // Prefer selected navigate route for bounds fitting
+    const selectedRoute = navigateRoutes?.find(r => r.selected);
+    const geom = selectedRoute?.geometry ?? routeGeometry;
+
+    if (geom && geom.length >= 2) {
+      map.fitBounds(geom as [number, number][], { padding: [60, 60] });
+    } else {
+      map.setView(center, map.getZoom());
     }
-  }, [bounds, map]);
+  }, [center, routeGeometry, navigateRoutes, map]);
+
   return null;
 }
 
-export const RoadSafetyMap = ({ accidents, startCoord, endCoord,routeGeometry }: any) => {
-  // const routePath: [number, number][] = (startCoord && endCoord) ? [startCoord, endCoord] : [];
-  const displayPath = (routeGeometry && routeGeometry.length > 0) 
-    ? routeGeometry 
-    : (startCoord && endCoord ? [startCoord, endCoord] : []);
+/** Maps a risk score (0–100) to a traffic-light colour. */
+function riskColor(risk: number): string {
+  if (risk > 50) return '#ef4444'; // red   – High
+  if (risk > 25) return '#f59e0b'; // amber – Medium
+  return '#22c55e';               // green – Safe
+}
+
+/** Color palette for alternative navigate routes */
+const ROUTE_COLORS = ['#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899', '#14b8a6'];
+
+export const RoadSafetyMap = ({
+  accidents,
+  segmentedPath,
+  routeGeometry,
+  center,
+  userPosition,
+  navigateRoutes,
+  onSelectRoute,
+}: Props) => {
+  const hasRoute = routeGeometry && routeGeometry.length >= 2;
+  const hasNavRoutes = navigateRoutes && navigateRoutes.length > 0;
 
   return (
-    <div className="h-full w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-      <MapContainer center={[20.5937, 78.9629]} zoom={5} className="h-full w-full">
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        
-        {/* Draw the ROAD-FOLLOWING Path */}
-        {displayPath.length > 0 && (
-          <Polyline 
-            positions={displayPath} 
-            pathOptions={{ 
-              color: '#10b981', 
-              weight: 5, 
-              opacity: 0.8,
-              lineJoin: 'round' 
-            }} 
+    <div className="h-full w-full">
+      <MapContainer
+        center={center}
+        zoom={12}
+        className="h-full w-full"
+        zoomControl={true}
+      >
+        <MapController center={center} routeGeometry={routeGeometry} navigateRoutes={navigateRoutes} />
+
+        {/* ── OpenStreetMap tiles (proper street map) ── */}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          maxZoom={19}
+        />
+
+        {/* ── Navigate routes: draw ALL routes from Mappls ── */}
+        {hasNavRoutes && navigateRoutes!.map((route, _idx) => {
+          if (!route.geometry || route.geometry.length < 2) return null;
+          const color = route.selected ? '#06b6d4' : ROUTE_COLORS[route.index % ROUTE_COLORS.length];
+
+          return (
+            <Polyline
+              key={`nav-${route.index}`}
+              positions={route.geometry}
+              pathOptions={{
+                color: route.selected ? color : '#64748b',
+                weight: route.selected ? 7 : 4,
+                opacity: route.selected ? 0.9 : 0.35,
+                lineJoin: 'round',
+                lineCap: 'round',
+                dashArray: route.selected ? undefined : '8,6',
+              }}
+              eventHandlers={{
+                click: () => onSelectRoute?.(route.index),
+              }}
+            >
+              <Popup>
+                <div className="text-xs font-sans">
+                  <p className="font-bold">{route.name}</p>
+                  <p>Risk: {(route.risk * 100).toFixed(0)}%</p>
+                  <p>{route.selected ? '✅ Selected' : 'Click to select'}</p>
+                </div>
+              </Popup>
+            </Polyline>
+          );
+        })}
+
+        {/* ── Base route: full OSRM geometry (only when no navigate routes) ── */}
+        {!hasNavRoutes && hasRoute && (
+          <Polyline
+            positions={routeGeometry!}
+            pathOptions={{
+              color: '#3b82f6',   // blue base line
+              weight: 8,
+              opacity: 0.35,
+              lineJoin: 'round',
+              lineCap: 'round',
+            }}
           />
         )}
 
-        {/* Auto-Zoom to the entire route */}
-        <ChangeView bounds={displayPath} />
-
-        {/* Render Accident Hotspots */}
-        {accidents.map((point: any) => (
-          <CircleMarker
-            key={point.id}
-            center={[point.lat, point.lng]}
-            radius={8}
-            pathOptions={{ 
-              fillColor: point.severity === 'high' ? '#ef4444' : '#f59e0b', 
-              color: 'white', 
-              weight: 1, 
-              fillOpacity: 0.8 
+        {/* ── Risk overlay: colour-coded segments on top of the base line ── */}
+        {!hasNavRoutes && segmentedPath?.map((segment, i) => (
+          <Polyline
+            key={`seg-${i}`}
+            positions={segment.coords}
+            pathOptions={{
+              color: riskColor(segment.risk),
+              weight: 5,
+              opacity: 0.9,
+              lineJoin: 'round',
+              lineCap: 'round',
             }}
           >
             <Popup>
-              <div className="text-slate-900 font-sans">
-                <p className="font-bold">{point.description}</p>
-                <p className="text-xs">Risk Impact: {point.severity.toUpperCase()}</p>
+              <div className="text-xs font-sans">
+                <p className="font-bold">Risk Score: {segment.risk.toFixed(1)}</p>
+                <p>
+                  {segment.risk > 50
+                    ? '🔴 High Risk'
+                    : segment.risk > 25
+                      ? '🟡 Moderate Risk'
+                      : '🟢 Safe'}
+                </p>
               </div>
             </Popup>
-          </CircleMarker>
+          </Polyline>
         ))}
+
+        {/* User live position marker */}
+        {userPosition && (
+          <>
+            {/* Accuracy radius ring */}
+            {userPosition.accuracy && userPosition.accuracy < 200 && (
+              <CircleMarker
+                center={[userPosition.lat, userPosition.lng]}
+                radius={Math.min(userPosition.accuracy / 5, 40)}
+                pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.08, weight: 1, dashArray: '4,4' }}
+              />
+            )}
+            {/* You-are-here dot */}
+            <CircleMarker
+              center={[userPosition.lat, userPosition.lng]}
+              radius={10}
+              pathOptions={{ fillColor: '#3b82f6', color: 'white', weight: 3, fillOpacity: 1 }}
+            >
+              <Popup><div className="text-xs font-bold text-blue-600">📍 Your location</div></Popup>
+            </CircleMarker>
+          </>
+        )}
+
+        {/* ── Accident hotspot circles ── */}
+        {accidents?.map((point, idx) => {
+          const lat = point.Latitude ?? point.lat;
+          const lng = point.Longitude ?? point.lng;
+          if (lat == null || lng == null) return null;
+
+          return (
+            <CircleMarker
+              key={`acc-${idx}`}
+              center={[lat, lng]}
+              radius={9}
+              pathOptions={{
+                fillColor: '#ef4444',
+                color: '#fff',
+                weight: 2,
+                fillOpacity: 0.8,
+              }}
+            >
+              <Popup>
+                <div className="text-xs font-sans">
+                  <p className="font-bold">{point.City ?? 'Accident Location'}</p>
+                  <p>Risk Score: {point.Risk_Score}</p>
+                  <p>Road: {point.Road_Condition}</p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
     </div>
   );
