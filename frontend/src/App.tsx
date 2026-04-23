@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { RoadSafetyMap } from './components/RoadSafetyMap';
 import { RiskAnalysisPanel } from './components/RiskAnalysisPanel';
@@ -18,6 +18,7 @@ import { useTheme } from './context/ThemeContext';
 import { useEffect } from 'react';
 import { ShieldAlert, MapPin, Route, Loader2, AlertTriangle } from 'lucide-react';
 import type { WeatherData } from './api/client';
+import type { SafetyResponse } from './types/safety';
 import { safetyApi } from './api/client';
 
 // ── Tab definition ──────────────────────────────────────────────────────────
@@ -48,7 +49,8 @@ export default function App() {
   );
 
   // WebSocket for push notifications
-  const wsSessionId = useMemo(() => `driver-${Math.random().toString(36).slice(2, 10)}`, []);
+  const wsSessionIdRef = useRef(`driver-${Math.random().toString(36).slice(2, 10)}`);
+  const wsSessionId = wsSessionIdRef.current;
   const { connected: wsConnected, alerts: wsAlerts, dismissAlert } = useWebSocket(wsSessionId, {
     enabled: true,
   });
@@ -58,6 +60,7 @@ export default function App() {
     if (trackingEnabled && position) {
       setStart(`${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackingEnabled, position?.lat, position?.lng]);
 
   // Reset selected route when new results arrive
@@ -70,8 +73,9 @@ export default function App() {
 
   // Extract weather from route analysis response
   useEffect(() => {
-    if (data && (data as any).weather) {
-      setWeatherData((data as any).weather);
+    const dataWithWeather = data as (SafetyResponse & { weather?: WeatherData }) | null;
+    if (dataWithWeather?.weather) {
+      setWeatherData(dataWithWeather.weather);
     }
   }, [data]);
 
@@ -84,7 +88,8 @@ export default function App() {
         })
         .catch(() => {});
     }
-  }, [data?.start_coords]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.start_coords, weatherData]);
 
   const handleAnalyze = async () => {
     if (!start || !end) return;

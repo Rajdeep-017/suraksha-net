@@ -42,9 +42,33 @@ export default function RouteSummaryPanel({ data, start, end }: Props) {
   };
 
   useEffect(() => {
-    if (data && start && end) {
-      fetchSummary();
-    }
+    if (!data || !start || !end) return;
+    let cancelled = false;
+    const doFetch = async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        const topHotspots = (data.accident_points ?? [])
+          .slice(0, 5)
+          .map(p => p.place_name || p.City || 'Unknown');
+        const res = await safetyApi.getRouteSummary({
+          start,
+          end,
+          safety_score: data.safety_score,
+          risk_level: data.risk_level,
+          total_accidents: data.total_accidents,
+          travel_time: data.travel_time ?? 0,
+          top_hotspots: topHotspots,
+        });
+        if (!cancelled) setSummary(res.data.summary);
+      } catch {
+        if (!cancelled) setError(true);
+      }
+      if (!cancelled) setLoading(false);
+    };
+    doFetch();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.safety_score, start, end]);
 
   return (

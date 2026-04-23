@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, type UserRole } from '../../context/AuthContext';
 import {
@@ -80,22 +80,7 @@ export default function AuthPage() {
         <div className="min-h-screen flex bg-[#070b14] relative overflow-hidden">
 
             {/* ── Animated background particles ── */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(30)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="absolute rounded-full bg-cyan-400/20"
-                        style={{
-                            width: `${2 + Math.random() * 3}px`,
-                            height: `${2 + Math.random() * 3}px`,
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            animation: `float ${8 + Math.random() * 12}s ease-in-out infinite`,
-                            animationDelay: `${Math.random() * 5}s`,
-                        }}
-                    />
-                ))}
-            </div>
+            <Particles />
 
             {/* ────────────────────── LEFT PANEL — Branding ────────────────────── */}
             <div className="hidden lg:flex w-[42%] flex-col items-center justify-center relative">
@@ -273,6 +258,28 @@ export default function AuthPage() {
                     75% { transform: translateY(-25px) translateX(8px); opacity: 0.5; }
                 }
             `}</style>
+        </div>
+    );
+}
+
+/* Pre-compute random particle styles once to avoid Math.random in render */
+function Particles() {
+    const particles = useMemo(() =>
+        Array.from({ length: 30 }, () => ({
+            width: `${2 + Math.random() * 3}px`,
+            height: `${2 + Math.random() * 3}px`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `float ${8 + Math.random() * 12}s ease-in-out infinite`,
+            animationDelay: `${Math.random() * 5}s`,
+        }))
+    , []);
+
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {particles.map((style, i) => (
+                <div key={i} className="absolute rounded-full bg-cyan-400/20" style={style} />
+            ))}
         </div>
     );
 }

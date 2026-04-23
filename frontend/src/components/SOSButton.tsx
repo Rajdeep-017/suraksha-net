@@ -17,27 +17,6 @@ export default function SOSButton({ position, nearestHotspot, driverName }: Prop
   const [countdown, setCountdown] = useState(5);
   const [sosId, setSosId] = useState<string | null>(null);
 
-  // Countdown timer
-  useEffect(() => {
-    if (state !== 'countdown') return;
-    if (countdown <= 0) {
-      sendSOS();
-      return;
-    }
-    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [state, countdown]);
-
-  const startSOS = () => {
-    setState('countdown');
-    setCountdown(5);
-  };
-
-  const cancelSOS = () => {
-    setState('idle');
-    setCountdown(5);
-  };
-
   const sendSOS = useCallback(async () => {
     setState('sending');
     try {
@@ -60,6 +39,27 @@ export default function SOSButton({ position, nearestHotspot, driverName }: Prop
       setTimeout(() => setState('idle'), 5000);
     }
   }, [position, nearestHotspot, driverName]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (state !== 'countdown') return;
+    if (countdown <= 0) {
+      sendSOS();
+      return;
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [state, countdown, sendSOS]);
+
+  const startSOS = () => {
+    setState('countdown');
+    setCountdown(5);
+  };
+
+  const cancelSOS = () => {
+    setState('idle');
+    setCountdown(5);
+  };
 
   const isDark = theme === 'dark';
 
