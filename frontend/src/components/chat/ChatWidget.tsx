@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { MessageCircle, X, Send, Loader2, Navigation, Bot, User } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -14,6 +15,8 @@ function formatReply(text: string): string {
 }
 
 export default function ChatWidget() {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -88,7 +91,7 @@ export default function ChatWidget() {
             {!open && (
                 <button
                     onClick={() => setOpen(true)}
-                    className="fixed bottom-6 right-6 z-50 bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-2xl shadow-2xl shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95"
+                    className="fixed bottom-6 right-6 z-[9999] bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-2xl shadow-2xl shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95"
                     aria-label="Open chat"
                 >
                     <MessageCircle size={24} />
@@ -98,9 +101,9 @@ export default function ChatWidget() {
 
             {/* ── Chat panel ──────────────────────────────────────── */}
             {open && (
-                <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[560px] bg-[#0b0f1a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                <div className={`fixed bottom-6 right-6 z-[9999] w-[400px] h-[560px] ${isDark ? 'bg-[#0b0f1a]' : 'bg-white'} border ${isDark ? 'border-white/10' : 'border-slate-200'} rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
                     {/* Header */}
-                    <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0d1220]">
+                    <div className={`shrink-0 flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-white/5 bg-[#0d1220]' : 'border-slate-100 bg-slate-50'}`}>
                         <div className="flex items-center gap-2.5">
                             <div className="bg-emerald-500 p-1.5 rounded-lg">
                                 <Bot size={16} className="text-white" />
@@ -172,7 +175,7 @@ export default function ChatWidget() {
                     {/* Input */}
                     <form
                         onSubmit={sendMessage}
-                        className="shrink-0 border-t border-white/5 px-3 py-3 flex items-center gap-2 bg-[#0d1220]"
+                        className={`shrink-0 border-t ${isDark ? 'border-white/5 bg-[#0d1220]' : 'border-slate-100 bg-slate-50'} px-3 py-3 flex items-center gap-2`}
                     >
                         <input
                             ref={inputRef}
@@ -180,7 +183,7 @@ export default function ChatWidget() {
                             onChange={(e) => setInput(e.target.value)}
                             disabled={loading}
                             placeholder="Ask about road safety..."
-                            className="flex-1 bg-slate-800 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all"
+                            className={`flex-1 ${isDark ? 'bg-slate-800 border-white/5 text-white placeholder-slate-600' : 'bg-slate-100 border-slate-200 text-slate-900 placeholder-slate-400'} border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all`}
                         />
                         <button
                             type="submit"

@@ -1,7 +1,7 @@
 import { useState, useMemo, type FormEvent } from 'react';
 import {
     FileText, Send, Loader2, CheckCircle, AlertCircle, MapPin,
-    Clock, ChevronDown, X, Map, List, Filter, ShieldCheck, Eye, CheckCircle2
+    Clock, X, Map, List, ShieldCheck, Eye, CheckCircle2
 } from 'lucide-react';
 import { SEEDED_INCIDENTS, type IncidentRecord } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';

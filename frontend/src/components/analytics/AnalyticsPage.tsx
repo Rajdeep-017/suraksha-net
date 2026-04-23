@@ -2,15 +2,13 @@ import { useState, useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-    LineChart, Line, Area, AreaChart,
+    Area, AreaChart,
     ScatterChart, Scatter, CartesianGrid,
-    PieChart, Pie, Cell, Legend,
+    PieChart, Pie, Cell,
 } from 'recharts';
 import { Filter, X, Trophy } from 'lucide-react';
 import {
-    ACCIDENT_DATA, ACCIDENTS_BY_TIME_BIN, RISK_DISTRIBUTION,
-    WEATHER_VS_RISK, FATALITIES_BY_MONTH, TRAFFIC_VS_RISK,
-    ROAD_CONDITION_BREAKDOWN, TOP_10_LOCATIONS, CORRELATION_INSIGHTS,
+    ACCIDENT_DATA, TOP_10_LOCATIONS, CORRELATION_INSIGHTS,
     type AccidentRow,
 } from '../../data/mockData';
 
@@ -180,7 +178,7 @@ export default function AnalyticsPage() {
                     <ResponsiveContainer width="100%" height={220}>
                         <PieChart>
                             <Pie data={roadBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                                 labelLine={false}
                                 style={{ fontSize: 9 }}
                             >

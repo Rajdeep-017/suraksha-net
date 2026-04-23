@@ -1,91 +1,99 @@
-/* :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-} */
-
 @import "tailwindcss";
 
 @theme {
   --color-suraksha-safe: #22c55e;
   --color-suraksha-danger: #ef4444;
   --color-dark-bg: #0f172a;
-  
-  /* This fixes the "shadow-glass does not exist" error */
   --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* ── Dark mode (default) ───────────────────────────────────────── */
+:root.dark {
+  --bg-primary: #080c16;
+  --bg-secondary: #0b0f1a;
+  --bg-tertiary: #0d1220;
+  --bg-card: rgba(15, 23, 42, 0.6);
+  --bg-input: #1e293b;
+  --border-primary: rgba(255, 255, 255, 0.05);
+  --border-secondary: rgba(255, 255, 255, 0.08);
+  --border-input: rgba(255, 255, 255, 0.05);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --sidebar-bg: #0b0f1a;
+  --map-overlay-bg: rgba(15, 23, 42, 0.95);
+}
+
+/* ── Light mode ────────────────────────────────────────────────── */
+:root.light {
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8fafc;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-input: #e2e8f0;
+  --border-primary: rgba(0, 0, 0, 0.08);
+  --border-secondary: rgba(0, 0, 0, 0.1);
+  --border-input: rgba(0, 0, 0, 0.12);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --sidebar-bg: #ffffff;
+  --map-overlay-bg: rgba(255, 255, 255, 0.95);
 }
 
 @layer base {
   body {
     margin: 0;
     padding: 0;
-    @apply bg-dark-bg text-slate-100 antialiased overflow-hidden;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    @apply antialiased overflow-hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
-.glass-panel {
+/* ── Theme-aware overrides ─────────────────────────────────────── */
+.light .leaflet-container {
+  filter: none;
+}
+
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass-panel {
   @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-glass;
+}
+
+/* Light mode overrides for sidebar & panels */
+.light [data-theme-surface] {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.light [data-theme-input] {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-input) !important;
+  color: var(--text-primary) !important;
+}
+
+.light [data-theme-text-muted] {
+  color: var(--text-muted) !important;
+}
+
+.light [data-theme-text-secondary] {
+  color: var(--text-secondary) !important;
+}
+
+/* Leaflet popup light mode */
+.light .leaflet-popup-content-wrapper {
+  background: white;
+  color: #1e293b;
+}
+
+.light .leaflet-popup-tip {
+  background: white;
 }

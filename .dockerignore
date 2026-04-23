@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Git & CI
+.git/
+.github/
+.gitignore
+
+# Environment files (use env_file in docker-compose)
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Notebooks (not needed in container)
+notebooks/
+
+# Build artifacts
+frontend/dist/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

@@ -6,11 +6,19 @@ import { RiskTable } from './components/RiskTable';
 import { NavigateSafePanel } from './components/NavigateSafePanel';
 import { ProximityAlert } from './components/ProximityAlert';
 import { RiskWarningToast } from './components/RiskWarningToast';
+import WeatherOverlay from './components/WeatherOverlay';
+import RouteSummaryPanel from './components/RouteSummaryPanel';
+import SOSButton from './components/SOSButton';
+import AlertNotifications from './components/AlertNotification';
 import { useRoadSafety } from './hooks/useRoadSafety';
 import { useNavigateSafe } from './hooks/useApiStatus';
 import { useLiveTracking } from './hooks/useLiveTracking';
+import { useWebSocket } from './hooks/useWebSocket';
+import { useTheme } from './context/ThemeContext';
 import { useEffect } from 'react';
 import { ShieldAlert, MapPin, Route, Loader2, AlertTriangle } from 'lucide-react';
+import type { WeatherData } from './api/client';
+import { safetyApi } from './api/client';
 
 // ── Tab definition ──────────────────────────────────────────────────────────
 type TabId = 'risk' | 'hotspots' | 'navigate';
@@ -21,19 +29,29 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function App() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('risk');
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [riskWarning, setRiskWarning] = useState<{ name: string; pct: string } | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
 
   const { analyzeRoute, loading, data, accidents, error } = useRoadSafety();
   const { navigateSafe, loading: navLoading, result: navResult, error: navError } = useNavigateSafe();
-  const { position, tracking, alerts, distanceFromUser } = useLiveTracking(
+  const { position, tracking, alerts: proximityAlerts, distanceFromUser } = useLiveTracking(
     accidents ?? [],
     { enabled: trackingEnabled, alertRadiusKm: 0.5 }
   );
+
+  // WebSocket for push notifications
+  const wsSessionId = useMemo(() => `driver-${Math.random().toString(36).slice(2, 10)}`, []);
+  const { connected: wsConnected, alerts: wsAlerts, dismissAlert } = useWebSocket(wsSessionId, {
+    enabled: true,
+  });
 
   // Auto-fill start with GPS when tracking turns on
   useEffect(() => {
@@ -46,13 +64,32 @@ export default function App() {
   useEffect(() => {
     if (navResult) {
       setSelectedRouteIndex(0);
-      setActiveTab('navigate'); // Auto-show routes when results arrive
+      setActiveTab('navigate');
     }
   }, [navResult]);
 
+  // Extract weather from route analysis response
+  useEffect(() => {
+    if (data && (data as any).weather) {
+      setWeatherData((data as any).weather);
+    }
+  }, [data]);
+
+  // Fallback: fetch weather separately if not in route response
+  useEffect(() => {
+    if (data?.start_coords && !weatherData) {
+      safetyApi.getWeather(data.start_coords[0], data.start_coords[1])
+        .then(res => {
+          if (res.data.weather) setWeatherData(res.data.weather);
+        })
+        .catch(() => {});
+    }
+  }, [data?.start_coords]);
+
   const handleAnalyze = async () => {
     if (!start || !end) return;
-    setActiveTab('risk'); // Switch to risk tab when analysis starts
+    setActiveTab('risk');
+    setWeatherData(null);
     const result = await analyzeRoute(start, end);
     if (result?.start_coords && result?.end_coords) {
       await navigateSafe({
@@ -90,8 +127,6 @@ export default function App() {
   const handleSelectRoute = useCallback((index: number) => {
     setSelectedRouteIndex(index);
     setActiveTab('navigate');
-
-    // Show warning for high-risk routes (≥ 40% and not the recommended)
     const route = allRoutes[index];
     if (route && index > 0) {
       const risk = parseInt(route.risk_percentage);
@@ -100,6 +135,13 @@ export default function App() {
       }
     }
   }, [allRoutes]);
+
+  // Find nearest hotspot name for SOS
+  const nearestHotspot = useMemo(() => {
+    if (!accidents || accidents.length === 0) return undefined;
+    const first = accidents[0];
+    return first.place_name || first.City || 'Nearby risk zone';
+  }, [accidents]);
 
   const mapCenter: [number, number] =
     position && trackingEnabled
@@ -114,7 +156,7 @@ export default function App() {
   const isAnalyzing = loading || navLoading;
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-[#0b0f1a]">
+    <div className={`flex h-full w-full overflow-hidden ${isDark ? 'bg-[#0b0f1a]' : 'bg-slate-100'}`}>
 
       {/* ── LEFT: Input Sidebar ──────────────────────────────────────── */}
       <Sidebar
@@ -143,8 +185,11 @@ export default function App() {
           onSelectRoute={handleSelectRoute}
         />
 
-        {/* Proximity alert — floats top-center over map only */}
-        <ProximityAlert alerts={alerts} position={position} />
+        {/* Weather overlay on map */}
+        <WeatherOverlay weather={weatherData} />
+
+        {/* Proximity alert */}
+        <ProximityAlert alerts={proximityAlerts} position={position} />
 
         {/* Risk warning toast */}
         {riskWarning && (
@@ -155,9 +200,9 @@ export default function App() {
           />
         )}
 
-        {/* Loading overlay — top-center over map */}
+        {/* Loading overlay */}
         {isAnalyzing && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900/95 backdrop-blur-md px-5 py-2.5 rounded-xl border border-white/10 text-sm font-medium text-slate-300 shadow-2xl">
+          <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 ${isDark ? 'bg-slate-900/95' : 'bg-white/95'} backdrop-blur-md px-5 py-2.5 rounded-xl border ${isDark ? 'border-white/10' : 'border-slate-200'} text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'} shadow-2xl`}>
             <Loader2 className="w-4 h-4 border-emerald-500 animate-spin" />
             {navLoading ? 'Finding safest route…' : 'Analyzing safety data…'}
           </div>
@@ -169,21 +214,28 @@ export default function App() {
             <AlertTriangle size={16} /><span>{error}</span>
           </div>
         )}
+
+        {/* SOS Button */}
+        <SOSButton
+          position={position}
+          nearestHotspot={nearestHotspot}
+          driverName="Driver"
+        />
       </main>
 
       {/* ── RIGHT: Tabbed results panel ─────────────────────────────── */}
       {hasData && (
-        <aside className="w-[300px] shrink-0 h-full bg-[#0d1220] border-l border-white/8 flex flex-col z-10 shadow-2xl">
+        <aside className={`w-[300px] shrink-0 h-full ${isDark ? 'bg-[#0d1220] border-white/8' : 'bg-white border-slate-200'} border-l flex flex-col z-10 shadow-2xl transition-colors`}>
 
           {/* Tab bar */}
-          <div className="flex border-b border-white/8 shrink-0">
+          <div className={`flex border-b ${isDark ? 'border-white/8' : 'border-slate-200'} shrink-0`}>
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id
                   ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5'
-                  : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-white/3'
+                  : `${isDark ? 'text-slate-500 hover:text-slate-300 hover:bg-white/3' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'} border-transparent`
                   }`}
               >
                 {tab.icon}
@@ -192,7 +244,7 @@ export default function App() {
             ))}
           </div>
 
-          {/* Tab content — fills rest of panel, scrollable */}
+          {/* Tab content */}
           <div className="flex-1 overflow-y-auto">
 
             {/* ── RISK TAB ── */}
@@ -204,7 +256,10 @@ export default function App() {
                     <p className="text-xs">Analyzing route risk…</p>
                   </div>
                 ) : data ? (
-                  <RiskAnalysisPanel data={data} />
+                  <>
+                    <RiskAnalysisPanel data={data} />
+                    <RouteSummaryPanel data={data} start={start} end={end} />
+                  </>
                 ) : (
                   <EmptyState icon={<ShieldAlert size={32} />} message="Analyze a route to see its risk profile." />
                 )}
@@ -252,8 +307,8 @@ export default function App() {
           </div>
 
           {/* Bottom status strip */}
-          <div className="shrink-0 px-4 py-2 border-t border-white/5 flex items-center justify-between">
-            <span className="text-[9px] text-slate-700 font-mono uppercase tracking-widest">Suraksha-Net AI</span>
+          <div className={`shrink-0 px-4 py-2 border-t ${isDark ? 'border-white/5' : 'border-slate-200'} flex items-center justify-between`}>
+            <span className={`text-[9px] font-mono uppercase tracking-widest ${isDark ? 'text-slate-700' : 'text-slate-400'}`}>Suraksha-Net AI</span>
             {data && (
               <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${(data.safety_score ?? 0) >= 70 ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/8' :
                 (data.safety_score ?? 0) >= 40 ? 'text-amber-400 border-amber-500/20 bg-amber-500/8' :
@@ -265,16 +320,24 @@ export default function App() {
           </div>
         </aside>
       )}
+
+      {/* ── WebSocket Alert Notifications ─────────────────────────── */}
+      <AlertNotifications
+        alerts={wsAlerts}
+        connected={wsConnected}
+        onDismiss={dismissAlert}
+      />
     </div>
   );
 }
 
 /* ── Empty state placeholder ───────────────────────────────────────────── */
 function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
+  const { theme } = useTheme();
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <div className="text-slate-700">{icon}</div>
-      <p className="text-xs text-slate-600 max-w-[200px] leading-relaxed">{message}</p>
+      <div className={theme === 'dark' ? 'text-slate-700' : 'text-slate-300'}>{icon}</div>
+      <p className={`text-xs max-w-[200px] leading-relaxed ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>{message}</p>
     </div>
   );
 }

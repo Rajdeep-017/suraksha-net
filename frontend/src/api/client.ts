@@ -15,14 +15,14 @@ export interface PredictRiskRequest {
   lat: number;
   lon: number;
   city: string;
-  weather?: string;       // 'Clear' | 'Rainy' | 'Foggy'
-  road_condition?: string; // 'Dry' | 'Wet' | 'Icy'
+  weather?: string;
+  road_condition?: string;
 }
 
 export interface PredictRiskResponse {
   status: 'success' | 'error';
-  risk_level: string;     // e.g. 'High' | 'Moderate' | 'Low'
-  risk_score: number;     // integer from model
+  risk_level: string;
+  risk_score: number;
 }
 
 export interface NavigateSafeRequest {
@@ -34,13 +34,13 @@ export interface NavigateSafeRequest {
 }
 
 export interface RouteStep {
-  instruction: string;  // human-readable e.g. "Turn right onto NH-48"
-  distance: string;     // e.g. "1.2 km" or "300 m"
-  duration: string;     // e.g. "2 min"
-  type: string;         // "turn", "roundabout", "arrive", etc.
-  modifier: string;     // "left", "right", "straight"
-  road: string;         // road/highway name
-  tags: string[];       // ["highway", "roundabout", "flyover"]
+  instruction: string;
+  distance: string;
+  duration: string;
+  type: string;
+  modifier: string;
+  road: string;
+  tags: string[];
 }
 
 export interface RouteOption {
@@ -51,9 +51,9 @@ export interface RouteOption {
   duration: string;
   polyline: string;
   final_score: number;
-  steps: RouteStep[];   // turn-by-turn maneuvers from Mappls
-  route_geometry: [number, number][];  // decoded polyline for map rendering
-  traffic_info: string;                // e.g. "🔴 Heavy traffic · Morning Rush"
+  steps: RouteStep[];
+  route_geometry: [number, number][];
+  traffic_info: string;
   is_peak_hour: boolean;
 }
 
@@ -63,27 +63,127 @@ export interface NavigateSafeResponse {
 }
 
 export interface HealthResponse {
-  status: string;         // 'healthy' | 'online'
+  status: string;
   model_loaded: boolean;
   csv_loaded?: boolean;
+  ws_connections?: number;
+}
+
+// ── Weather Types ─────────────────────────────────────────────────────────────
+
+export interface WeatherData {
+  temp: number;
+  feels_like: number;
+  humidity: number;
+  wind_speed: number;
+  visibility: number;
+  condition: string;     // Clear | Cloudy | Rainy | Foggy | Stormy | Snowy
+  description: string;
+  icon: string;
+  owm_code: number;
+  is_severe: boolean;
+  alert_text: string | null;
+}
+
+export interface WeatherResponse {
+  status: 'success' | 'unavailable';
+  weather: WeatherData | null;
+  message?: string;
+}
+
+// ── Route Summary Type ────────────────────────────────────────────────────────
+
+export interface RouteSummaryRequest {
+  start: string;
+  end: string;
+  safety_score: number;
+  risk_level: string;
+  total_accidents: number;
+  travel_time: number;
+  top_hotspots: string[];
+  weather?: string;
+}
+
+export interface RouteSummaryResponse {
+  status: 'success' | 'error';
+  summary: string;
+}
+
+// ── SOS Types ─────────────────────────────────────────────────────────────────
+
+export interface SOSRequest {
+  lat: number;
+  lon: number;
+  timestamp?: string;
+  nearest_hotspot?: string;
+  driver_name?: string;
+}
+
+export interface SOSResponse {
+  status: 'success' | 'error';
+  sos_id: string;
+  message: string;
+}
+
+// ── Admin Broadcast Types ─────────────────────────────────────────────────────
+
+export interface BroadcastRequest {
+  zone: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+}
+
+// ── WebSocket Alert Type ──────────────────────────────────────────────────────
+
+export interface WSAlert {
+  type: 'zone_entry' | 'weather_warning' | 'admin_broadcast' | 'sos_nearby';
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  zone: string;
+  timestamp: string;
+  data: Record<string, any>;
 }
 
 // ── API surface ───────────────────────────────────────────────────────────────
 
 export const safetyApi = {
-  /** POST /api/analyze-route — main route analysis (OSRM + CSV risk) */
+  /** POST /api/analyze-route — main route analysis */
   analyzeRoute: (start: string, end: string) =>
     apiClient.post('/api/analyze-route', { start, end }),
 
-  /** GET /api/health — checks if ML models are loaded */
+  /** GET /api/health */
   health: () =>
     apiClient.get<HealthResponse>('/api/health'),
 
-  /** POST /api/predict-risk — single-point risk prediction via ML model */
+  /** POST /api/predict-risk */
   predictRisk: (payload: PredictRiskRequest) =>
     apiClient.post<PredictRiskResponse>('/api/predict-risk', payload),
 
-  /** POST /api/navigate-safe — Mappls multi-route ranking by safety */
+  /** POST /api/navigate-safe */
   navigateSafe: (payload: NavigateSafeRequest) =>
     apiClient.post<NavigateSafeResponse>('/api/navigate-safe', payload),
+
+  /** GET /api/weather */
+  getWeather: (lat: number, lon: number) =>
+    apiClient.get<WeatherResponse>(`/api/weather?lat=${lat}&lon=${lon}`),
+
+  /** POST /api/route-summary — AI-generated route summary */
+  getRouteSummary: (payload: RouteSummaryRequest) =>
+    apiClient.post<RouteSummaryResponse>('/api/route-summary', payload),
+
+  /** POST /api/sos — Emergency SOS */
+  sendSOS: (payload: SOSRequest) =>
+    apiClient.post<SOSResponse>('/api/sos', payload),
+
+  /** POST /api/admin/broadcast — Admin broadcast warning */
+  adminBroadcast: (payload: BroadcastRequest) =>
+    apiClient.post('/api/admin/broadcast', payload),
+
+  /** GET /api/admin/alerts — Recent alert log */
+  getAlertLog: () =>
+    apiClient.get('/api/admin/alerts'),
+
+  /** GET /api/sos/list — SOS events for admin */
+  getSOSList: () =>
+    apiClient.get('/api/sos/list'),
 };

@@ -79,14 +79,43 @@ function QuickActions({ onExport }: { onExport: () => void }) {
     const [retraining, setRetraining] = useState(false);
     const [retrained, setRetrained] = useState(false);
     const [alertModal, setAlertModal] = useState(false);
+    const [broadcastMsg, setBroadcastMsg] = useState('');
+    const [broadcastZone, setBroadcastZone] = useState('');
+    const [broadcastSeverity, setBroadcastSeverity] = useState<'info' | 'warning' | 'critical'>('warning');
+    const [broadcasting, setBroadcasting] = useState(false);
+    const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
 
     const handleRetrain = async () => {
         setRetraining(true);
-        await new Promise(r => setTimeout(r, 2000)); // fake
+        await new Promise(r => setTimeout(r, 2000));
         setRetraining(false);
         setRetrained(true);
         setTimeout(() => setRetrained(false), 3000);
     };
+
+    const handleBroadcast = async () => {
+        if (!broadcastMsg.trim()) return;
+        setBroadcasting(true);
+        try {
+            const res = await apiClient.post('/api/admin/broadcast', {
+                zone: broadcastZone || 'All Zones',
+                message: broadcastMsg,
+                severity: broadcastSeverity,
+            });
+            setBroadcastResult(`✅ Sent to ${res.data.connected_drivers} driver(s)`);
+            setTimeout(() => {
+                setBroadcastResult(null);
+                setAlertModal(false);
+                setBroadcastMsg('');
+            }, 2500);
+        } catch {
+            setBroadcastResult('❌ Failed to send broadcast');
+            setTimeout(() => setBroadcastResult(null), 3000);
+        }
+        setBroadcasting(false);
+    };
+
+    const ZONES = ['All Zones', 'Hinjewadi', 'Katraj Bypass', 'Sinhagad Road', 'Pune Station', 'Kothrud', 'Hadapsar', 'Viman Nagar', 'Baner', 'Wakad'];
 
     return (
         <div className="bg-slate-900/60 border border-white/5 rounded-xl p-4 space-y-3">
@@ -111,28 +140,72 @@ function QuickActions({ onExport }: { onExport: () => void }) {
                 onClick={() => setAlertModal(true)}
                 className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2.5 rounded-xl transition-all"
             >
-                <Send size={14} /> Broadcast Alert
+                <Send size={14} /> Broadcast Warning
             </button>
 
-            {/* Alert modal */}
+            {/* Broadcast modal */}
             {alertModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setAlertModal(false)}>
-                    <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-sm font-bold text-white mb-3">Broadcast Safety Alert</h4>
+                    <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-[420px] shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <Send size={14} className="text-amber-400" /> Broadcast Warning to Drivers
+                        </h4>
+
+                        {/* Zone selector */}
+                        <label className="text-[9px] text-slate-500 uppercase block mb-1 font-bold">Zone</label>
+                        <select
+                            value={broadcastZone}
+                            onChange={e => setBroadcastZone(e.target.value)}
+                            className="w-full bg-slate-800 border border-white/5 rounded-xl px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-amber-500/50 mb-3"
+                        >
+                            {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                        </select>
+
+                        {/* Severity selector */}
+                        <label className="text-[9px] text-slate-500 uppercase block mb-1 font-bold">Severity</label>
+                        <div className="flex gap-2 mb-3">
+                            {(['info', 'warning', 'critical'] as const).map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => setBroadcastSeverity(s)}
+                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase border transition-all ${
+                                        broadcastSeverity === s
+                                            ? s === 'critical' ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                                                : s === 'warning' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                                                    : 'bg-blue-500/20 border-blue-500/40 text-blue-400'
+                                            : 'bg-slate-800 border-white/5 text-slate-500'
+                                    }`}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Message */}
+                        <label className="text-[9px] text-slate-500 uppercase block mb-1 font-bold">Message</label>
                         <textarea
-                            className="w-full bg-slate-800 border border-white/5 rounded-xl p-3 text-sm text-white placeholder-slate-600 outline-none focus:ring-2 focus:ring-amber-500/50 h-24 resize-none"
-                            placeholder="Type alert message..."
+                            value={broadcastMsg}
+                            onChange={e => setBroadcastMsg(e.target.value)}
+                            className="w-full bg-slate-800 border border-white/5 rounded-xl p-3 text-sm text-white placeholder-slate-600 outline-none focus:ring-2 focus:ring-amber-500/50 h-24 resize-none mb-3"
+                            placeholder="e.g. Avoid Katraj Bypass — Heavy rain + accident reported"
                         />
-                        <div className="flex gap-2 mt-3">
+
+                        {broadcastResult && (
+                            <p className="text-xs font-bold text-center mb-3 text-emerald-400">{broadcastResult}</p>
+                        )}
+
+                        <div className="flex gap-2">
                             <button
-                                onClick={() => setAlertModal(false)}
-                                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2 rounded-xl"
+                                onClick={handleBroadcast}
+                                disabled={broadcasting || !broadcastMsg.trim()}
+                                className="flex-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white text-xs font-bold py-2.5 rounded-xl"
                             >
-                                Send Alert
+                                {broadcasting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                                {broadcasting ? 'Sending...' : 'Send Broadcast'}
                             </button>
                             <button
                                 onClick={() => setAlertModal(false)}
-                                className="px-4 bg-slate-800 text-slate-400 text-xs font-bold py-2 rounded-xl border border-white/5"
+                                className="px-4 bg-slate-800 text-slate-400 text-xs font-bold py-2.5 rounded-xl border border-white/5"
                             >
                                 Cancel
                             </button>
