@@ -40,12 +40,14 @@ app.add_middleware(
 # 2. Include the ML routes router
 # --------------------------------------------------
 from app.api import routes as api_routes  # noqa: E402
+
 app.include_router(api_routes.router, prefix="/api")
 
 # --------------------------------------------------
 # 3. WebSocket endpoint for real-time alerts
 # --------------------------------------------------
 from app.services.websocket import manager as ws_manager  # noqa: E402
+
 
 @app.websocket("/ws/alerts/{session_id}")
 async def websocket_alerts(websocket: WebSocket, session_id: str):
@@ -58,6 +60,7 @@ async def websocket_alerts(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         ws_manager.disconnect(session_id)
 
+
 # --------------------------------------------------
 # 4. Load Dataset (path from .env with sensible default)
 # --------------------------------------------------
@@ -69,6 +72,7 @@ except FileNotFoundError:
         f"Accident CSV not found at '{CSV_PATH}'. "
         "Set the ACCIDENTS_CSV_PATH variable in your .env file."
     )
+
 
 # --------------------------------------------------
 # 5. Request Schema
@@ -102,6 +106,7 @@ def get_coords(location_name: str):
 # --------------------------------------------------
 _rev_cache: dict[str, str] = {}
 
+
 def reverse_geocode(lat: float, lng: float, fallback: str = "") -> str:
     key = f"{lat:.3f},{lng:.3f}"
     if key in _rev_cache:
@@ -131,8 +136,11 @@ def _nominatim_reverse(lat: float, lng: float) -> str:
         if road:
             parts.append(road)
         locality = (
-            addr.get("suburb") or addr.get("neighbourhood") or
-            addr.get("village") or addr.get("town") or addr.get("city")
+            addr.get("suburb")
+            or addr.get("neighbourhood")
+            or addr.get("village")
+            or addr.get("town")
+            or addr.get("city")
         )
         if locality:
             parts.append(locality)
@@ -157,9 +165,7 @@ def _mappls_reverse(lat: float, lng: float) -> str:
         results = data.get("results", [])
         if results:
             r = results[0]
-            parts = filter(None, [
-                r.get("locality"), r.get("district"), r.get("state")
-            ])
+            parts = filter(None, [r.get("locality"), r.get("district"), r.get("state")])
             return ", ".join(parts)
     except Exception:
         pass
@@ -195,14 +201,20 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371.0
     dlat = np.radians(lat2 - lat1)
     dlng = np.radians(lng2 - lng1)
-    a = np.sin(dlat / 2) ** 2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlng / 2) ** 2
+    a = (
+        np.sin(dlat / 2) ** 2
+        + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlng / 2) ** 2
+    )
     return R * 2 * np.arcsin(np.sqrt(a))
 
 
 def _point_to_segment_dist_km(
-    plat: float, plng: float,
-    alat: float, alng: float,
-    blat: float, blng: float,
+    plat: float,
+    plng: float,
+    alat: float,
+    alng: float,
+    blat: float,
+    blng: float,
 ) -> float:
     ax, ay = alng, alat
     bx, by = blng, blat
@@ -229,14 +241,15 @@ def filter_accidents_by_corridor(
     lngs = [p[1] for p in route_geometry]
     pad = corridor_km / 111.0
     bbox_mask = (
-        (accidents_df["Latitude"] >= min(lats) - pad) &
-        (accidents_df["Latitude"] <= max(lats) + pad) &
-        (accidents_df["Longitude"] >= min(lngs) - pad) &
-        (accidents_df["Longitude"] <= max(lngs) + pad)
+        (accidents_df["Latitude"] >= min(lats) - pad)
+        & (accidents_df["Latitude"] <= max(lats) + pad)
+        & (accidents_df["Longitude"] >= min(lngs) - pad)
+        & (accidents_df["Longitude"] <= max(lngs) + pad)
     )
     candidates = accidents_df[bbox_mask]
     if candidates.empty:
         return candidates
+
     def within_corridor(row):
         plat, plng = row["Latitude"], row["Longitude"]
         for i in range(len(route_geometry) - 1):
@@ -246,6 +259,7 @@ def filter_accidents_by_corridor(
             if dist <= corridor_km:
                 return True
         return False
+
     mask = candidates.apply(within_corridor, axis=1)
     return candidates[mask]
 
@@ -263,15 +277,16 @@ def build_segmented_path(route_geometry: list, nearby_accidents: pd.DataFrame) -
         seg_end = route_geometry[i + step]
         mid_lat = (seg_start[0] + seg_end[0]) / 2
         mid_lng = (seg_start[1] + seg_end[1]) / 2
-        mask = (
-            (df["Latitude"].between(mid_lat - 0.005, mid_lat + 0.005)) &
-            (df["Longitude"].between(mid_lng - 0.005, mid_lng + 0.005))
+        mask = (df["Latitude"].between(mid_lat - 0.005, mid_lat + 0.005)) & (
+            df["Longitude"].between(mid_lng - 0.005, mid_lng + 0.005)
         )
         local_risk = float(df[mask]["Risk_Score"].mean()) if not df[mask].empty else 0.0
-        segments.append({
-            "coords": [seg_start, seg_end],
-            "risk": round(local_risk, 1),
-        })
+        segments.append(
+            {
+                "coords": [seg_start, seg_end],
+                "risk": round(local_risk, 1),
+            }
+        )
     return segments
 
 
@@ -285,10 +300,13 @@ async def analyze_route(request: RouteRequest):
     end_coords = get_coords(request.end)
 
     if not start_coords or not end_coords:
-        raise HTTPException(status_code=400, detail="Could not find location coordinates")
+        raise HTTPException(
+            status_code=400, detail="Could not find location coordinates"
+        )
 
     # Step 1b – fetch live weather at start location
     from app.services.weather import get_weather
+
     weather_data = get_weather(start_coords[0], start_coords[1])
 
     # Step 2 – road path
@@ -301,8 +319,10 @@ async def analyze_route(request: RouteRequest):
         min_lat, max_lat = sorted([start_coords[0], end_coords[0]])
         min_lng, max_lng = sorted([start_coords[1], end_coords[1]])
         mask = (
-            (df["Latitude"] >= min_lat - 0.05) & (df["Latitude"] <= max_lat + 0.05) &
-            (df["Longitude"] >= min_lng - 0.05) & (df["Longitude"] <= max_lng + 0.05)
+            (df["Latitude"] >= min_lat - 0.05)
+            & (df["Latitude"] <= max_lat + 0.05)
+            & (df["Longitude"] >= min_lng - 0.05)
+            & (df["Longitude"] <= max_lng + 0.05)
         )
         corridor_df = df[mask]
     nearby_accidents = corridor_df.nlargest(10, "Risk_Score")
@@ -334,33 +354,37 @@ async def analyze_route(request: RouteRequest):
 
     for i, row in nearby_accidents.iterrows():
         row_data, place_name = enriched.get(i, (row, str(row["City"])))
-        accident_points.append({
-            "id": str(i),
-            "lat": row["Latitude"],
-            "lng": row["Longitude"],
-            "severity": "high" if row["Risk_Score"] > 15 else "medium",
-            "accidents": 1,
-            "description": f"Risk Score: {row['Risk_Score']} in {row['City']}",
-            "place_name": place_name,
-            "Risk_Score": float(row["Risk_Score"]),
-            "City": str(row["City"]),
-            "Road_Condition": str(row.get("Road_Condition", "")),
-        })
-        high_risk_locs.append({
-            "id": str(i),
-            "name": place_name,
-            "riskLevel": "high" if row["Risk_Score"] > 15 else "medium",
-            "accidents": int(row["Risk_Score"]),
-            "distance": "Nearby",
-        })
+        accident_points.append(
+            {
+                "id": str(i),
+                "lat": row["Latitude"],
+                "lng": row["Longitude"],
+                "severity": "high" if row["Risk_Score"] > 15 else "medium",
+                "accidents": 1,
+                "description": f"Risk Score: {row['Risk_Score']} in {row['City']}",
+                "place_name": place_name,
+                "Risk_Score": float(row["Risk_Score"]),
+                "City": str(row["City"]),
+                "Road_Condition": str(row.get("Road_Condition", "")),
+            }
+        )
+        high_risk_locs.append(
+            {
+                "id": str(i),
+                "name": place_name,
+                "riskLevel": "high" if row["Risk_Score"] > 15 else "medium",
+                "accidents": int(row["Risk_Score"]),
+                "distance": "Nearby",
+            }
+        )
 
     # Step 5 – aggregate risk
-    avg_risk = nearby_accidents["Risk_Score"].mean() if not nearby_accidents.empty else 0
+    avg_risk = (
+        nearby_accidents["Risk_Score"].mean() if not nearby_accidents.empty else 0
+    )
     safety_score = max(0, 100 - int(avg_risk))
     risk_level = (
-        "High" if safety_score < 40
-        else "Moderate" if safety_score < 70
-        else "Safe"
+        "High" if safety_score < 40 else "Moderate" if safety_score < 70 else "Safe"
     )
 
     # Step 6 – build segmented path

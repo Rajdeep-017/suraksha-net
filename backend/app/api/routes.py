@@ -44,15 +44,39 @@ except Exception as e:
 # --------------------------------------------------
 # Inference helper: build 15-feature vector
 # --------------------------------------------------
-_ROAD_RISK = {"Slippery":4, "Potholed":3, "Under Construction":3, "Wet":2, "Dry":1, "Good":1}
-_TIME_RISK = {"Late Night":3, "Night":2, "Morning Rush":2, "Evening Rush":2, "Afternoon":1, "Midday":1}
-_WEATHER_SEVERITY = {"Clear":1, "Cloudy":1, "Rainy":3, "Foggy":2, "Stormy":4, "Hail":4, "Snowy":3}
+_ROAD_RISK = {
+    "Slippery": 4,
+    "Potholed": 3,
+    "Under Construction": 3,
+    "Wet": 2,
+    "Dry": 1,
+    "Good": 1,
+}
+_TIME_RISK = {
+    "Late Night": 3,
+    "Night": 2,
+    "Morning Rush": 2,
+    "Evening Rush": 2,
+    "Afternoon": 1,
+    "Midday": 1,
+}
+_WEATHER_SEVERITY = {
+    "Clear": 1,
+    "Cloudy": 1,
+    "Rainy": 3,
+    "Foggy": 2,
+    "Stormy": 4,
+    "Hail": 4,
+    "Snowy": 3,
+}
+
 
 def _safe_encode(encoder_key: str, value: str) -> int:
     try:
         return int(ENCODERS[encoder_key].transform([value])[0])
     except (ValueError, KeyError):
         return 0
+
 
 def _get_time_bin(hour: int) -> str:
     if 6 <= hour < 10:
@@ -67,41 +91,58 @@ def _get_time_bin(hour: int) -> str:
         return "Night"
     return "Late Night"
 
+
 def _get_day_night(hour: int) -> str:
     return "Nighttime" if hour >= 20 or hour < 6 else "Daytime"
+
 
 def build_feature_vector(
     weather: str = "Clear",
     road_condition: str = "Dry",
     hour: int = 12,
 ) -> np.ndarray:
-    time_bin   = _get_time_bin(hour)
-    day_night  = _get_day_night(hour)
+    time_bin = _get_time_bin(hour)
+    day_night = _get_day_night(hour)
 
-    weather_enc        = _safe_encode("Weather", weather)
+    weather_enc = _safe_encode("Weather", weather)
     road_condition_enc = _safe_encode("Road_Condition", road_condition)
-    time_bin_enc       = _safe_encode("Time_Bin", time_bin)
-    day_night_enc      = _safe_encode("Day_Night", day_night)
+    time_bin_enc = _safe_encode("Time_Bin", time_bin)
+    day_night_enc = _safe_encode("Day_Night", day_night)
 
     weather_severity = _WEATHER_SEVERITY.get(weather, 2)
-    traffic_density  = 5
-    road_risk_num    = _ROAD_RISK.get(road_condition, 2)
-    time_risk_num    = _TIME_RISK.get(time_bin, 1)
-    is_night         = 1 if day_night == "Nighttime" else 0
+    traffic_density = 5
+    road_risk_num = _ROAD_RISK.get(road_condition, 2)
+    time_risk_num = _TIME_RISK.get(time_bin, 1)
+    is_night = 1 if day_night == "Nighttime" else 0
     weather_road_risk = weather_severity * road_risk_num
 
     casualty_severity_idx = 0
-    total_casualties      = 0
-    fatalities            = 0
-    serious_injuries      = 0
-    minor_injuries        = 0
+    total_casualties = 0
+    fatalities = 0
+    serious_injuries = 0
+    minor_injuries = 0
 
-    return np.array([[
-        weather_enc, road_condition_enc, time_bin_enc, day_night_enc,
-        weather_severity, traffic_density, road_risk_num, time_risk_num,
-        is_night, weather_road_risk, casualty_severity_idx, total_casualties,
-        fatalities, serious_injuries, minor_injuries,
-    ]])
+    return np.array(
+        [
+            [
+                weather_enc,
+                road_condition_enc,
+                time_bin_enc,
+                day_night_enc,
+                weather_severity,
+                traffic_density,
+                road_risk_num,
+                time_risk_num,
+                is_night,
+                weather_road_risk,
+                casualty_severity_idx,
+                total_casualties,
+                fatalities,
+                serious_injuries,
+                minor_injuries,
+            ]
+        ]
+    )
 
 
 # --------------------------------------------------
@@ -158,6 +199,7 @@ _sos_events: list[dict] = []
 # 3. Endpoints
 # --------------------------------------------------
 
+
 @router.get("/health")
 async def health_check():
     return {
@@ -176,7 +218,7 @@ async def predict_risk(data: RiskRequest):
             detail="ML models are not loaded. Run train.py first.",
         )
     try:
-        now  = datetime.now()
+        now = datetime.now()
         hour = now.hour
 
         features = build_feature_vector(
@@ -210,13 +252,17 @@ async def navigate_safe(data: NavigationRequest):
     """Calculates and ranks routes by safety score using the Mappls API."""
     try:
         results = get_safer_route(
-            data.origin_lat, data.origin_lon,
-            data.dest_lat, data.dest_lon,
+            data.origin_lat,
+            data.origin_lon,
+            data.dest_lat,
+            data.dest_lon,
             data.city,
         )
         return results
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Navigation Service Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Navigation Service Error: {str(e)}"
+        )
 
 
 # --------------------------------------------------
@@ -268,8 +314,14 @@ async def weather_endpoint(lat: float, lon: float):
 @router.post("/route-summary")
 async def route_summary(data: RouteSummaryRequest):
     """Generate an AI-powered summary of a route using Groq."""
-    hotspots_text = ", ".join(data.top_hotspots[:5]) if data.top_hotspots else "none identified"
-    weather_text = f"Current weather: {data.weather}" if data.weather else "Weather data unavailable"
+    hotspots_text = (
+        ", ".join(data.top_hotspots[:5]) if data.top_hotspots else "none identified"
+    )
+    weather_text = (
+        f"Current weather: {data.weather}"
+        if data.weather
+        else "Weather data unavailable"
+    )
 
     prompt = f"""Analyze this route and give a concise 3-4 sentence safety summary:
 

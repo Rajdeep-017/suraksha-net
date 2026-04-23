@@ -23,11 +23,15 @@ class ConnectionManager:
     async def connect(self, session_id: str, websocket: WebSocket):
         await websocket.accept()
         self.active_connections[session_id] = websocket
-        print(f"[WS] Driver connected: {session_id} (total: {len(self.active_connections)})")
+        print(
+            f"[WS] Driver connected: {session_id} (total: {len(self.active_connections)})"
+        )
 
     def disconnect(self, session_id: str):
         self.active_connections.pop(session_id, None)
-        print(f"[WS] Driver disconnected: {session_id} (total: {len(self.active_connections)})")
+        print(
+            f"[WS] Driver disconnected: {session_id} (total: {len(self.active_connections)})"
+        )
 
     async def send_to_driver(self, session_id: str, alert: dict):
         """Send alert to a specific driver."""
