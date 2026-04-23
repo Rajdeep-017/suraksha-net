@@ -16,17 +16,29 @@ load_dotenv()
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))  # Pointing to backend/app
 MODEL_DIR = os.path.join(BASE_PATH, "models")
 
-model = joblib.load(os.path.join(MODEL_DIR, "severity_model.pkl"))
-encoders = joblib.load(os.path.join(MODEL_DIR, "encoders.pkl"))
-severity_encoder = joblib.load(os.path.join(MODEL_DIR, "severity_encoder.pkl"))
-coord_scaler = joblib.load(os.path.join(MODEL_DIR, "coord_scaler.pkl"))
-kmeans = joblib.load(os.path.join(MODEL_DIR, "kmeans_hotspots.pkl"))
+model = None
+encoders = None
+severity_encoder = None
+coord_scaler = None
+kmeans = None
+
+try:
+    model = joblib.load(os.path.join(MODEL_DIR, "severity_model.pkl"))
+    encoders = joblib.load(os.path.join(MODEL_DIR, "encoders.pkl"))
+    severity_encoder = joblib.load(os.path.join(MODEL_DIR, "severity_encoder.pkl"))
+    coord_scaler = joblib.load(os.path.join(MODEL_DIR, "coord_scaler.pkl"))
+    kmeans = joblib.load(os.path.join(MODEL_DIR, "kmeans_hotspots.pkl"))
+    print("[OK] Navigation ML models loaded successfully.")
+except Exception as e:
+    print(
+        f"[WARN] Navigation ML models not found: {e}. Navigation risk scoring unavailable."
+    )
 
 MAPPLS_API_KEY = os.getenv("MAPPLS_API_KEY")
 if not MAPPLS_API_KEY:
-    raise ValueError(
-        "MAPPLS_API_KEY is not set. Add it to your backend/.env file. "
-        "Get a free key from https://apis.mappls.com/"
+    print(
+        "[WARN] MAPPLS_API_KEY is not set. Navigation features will be unavailable. "
+        "Add it to your backend/.env file. Get a free key from https://apis.mappls.com/"
     )
 
 # --------------------------------------------------

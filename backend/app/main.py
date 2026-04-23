@@ -64,13 +64,24 @@ async def websocket_alerts(websocket: WebSocket, session_id: str):
 # --------------------------------------------------
 # 4. Load Dataset (path from .env with sensible default)
 # --------------------------------------------------
-CSV_PATH = os.getenv("ACCIDENTS_CSV_PATH", r"D:\final_merged_accidents.csv")
+CSV_PATH = os.getenv("ACCIDENTS_CSV_PATH", "final_merged_accidents.csv")
 try:
     df = pd.read_csv(CSV_PATH)
+    print(f"[OK] Loaded {len(df)} accident records from {CSV_PATH}")
 except FileNotFoundError:
-    raise RuntimeError(
-        f"Accident CSV not found at '{CSV_PATH}'. "
-        "Set the ACCIDENTS_CSV_PATH variable in your .env file."
+    print(
+        f"[WARN] Accident CSV not found at '{CSV_PATH}'. "
+        "Route analysis will return empty results. "
+        "Set ACCIDENTS_CSV_PATH in your .env file."
+    )
+    df = pd.DataFrame(
+        columns=[
+            "Latitude",
+            "Longitude",
+            "Risk_Score",
+            "City",
+            "Road_Condition",
+        ]
     )
 
 
