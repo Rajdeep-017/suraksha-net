@@ -6,7 +6,6 @@ import numpy as np
 import requests
 import uvicorn
 import os
-import uuid
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -40,13 +39,13 @@ app.add_middleware(
 # --------------------------------------------------
 # 2. Include the ML routes router
 # --------------------------------------------------
-from app.api import routes as api_routes
+from app.api import routes as api_routes  # noqa: E402
 app.include_router(api_routes.router, prefix="/api")
 
 # --------------------------------------------------
 # 3. WebSocket endpoint for real-time alerts
 # --------------------------------------------------
-from app.services.websocket import manager as ws_manager
+from app.services.websocket import manager as ws_manager  # noqa: E402
 
 @app.websocket("/ws/alerts/{session_id}")
 async def websocket_alerts(websocket: WebSocket, session_id: str):
@@ -54,7 +53,7 @@ async def websocket_alerts(websocket: WebSocket, session_id: str):
     try:
         while True:
             # Keep connection alive; client can send position updates
-            data = await websocket.receive_text()
+            _data = await websocket.receive_text()
             # Optionally process position updates for zone detection
     except WebSocketDisconnect:
         ws_manager.disconnect(session_id)

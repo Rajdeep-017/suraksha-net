@@ -67,7 +67,9 @@ export function useWebSocket(sessionId: string, options: UseWebSocketOptions) {
   }, [enabled, sessionId, maxAlerts]);
 
   // Keep the ref in sync with the latest connect function
-  connectRef.current = connect;
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     if (enabled) {

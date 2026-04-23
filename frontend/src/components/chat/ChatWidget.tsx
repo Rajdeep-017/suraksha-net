@@ -83,7 +83,7 @@ export default function ChatWidget() {
 
     const handleRouteClick = (route: { origin: string; destination: string }) => {
         // Navigate to driver page with query params for the route
-        window.location.href = `/driver?origin=${encodeURIComponent(route.origin)}&destination=${encodeURIComponent(route.destination)}`;
+        window.location.assign(`/driver?origin=${encodeURIComponent(route.origin)}&destination=${encodeURIComponent(route.destination)}`);
     };
 
     return (

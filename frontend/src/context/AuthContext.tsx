@@ -62,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const register = async (email: string, name: string, _password: string, role: UserRole): Promise<boolean> => {
         await new Promise(r => setTimeout(r, 400));
         const newUser: AuthUser = { email, name, role, token: mockToken() };

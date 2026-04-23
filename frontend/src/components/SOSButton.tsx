@@ -44,6 +44,7 @@ export default function SOSButton({ position, nearestHotspot, driverName }: Prop
   useEffect(() => {
     if (state !== 'countdown') return;
     if (countdown <= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       sendSOS();
       return;
     }

@@ -7,8 +7,6 @@ Supports:
 - Targeted alerts (zone_entry, weather_warning, sos_nearby)
 """
 
-import json
-import asyncio
 from datetime import datetime
 from fastapi import WebSocket
 

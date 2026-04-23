@@ -44,11 +44,16 @@ def _safe_enc(key, value):
         return 0
 
 def _time_bin(hour):
-    if 6 <= hour < 10:   return "Morning Rush"
-    if 10 <= hour < 12:  return "Midday"
-    if 12 <= hour < 16:  return "Afternoon"
-    if 16 <= hour < 20:  return "Evening Rush"
-    if 20 <= hour < 23:  return "Night"
+    if 6 <= hour < 10:
+        return "Morning Rush"
+    if 10 <= hour < 12:
+        return "Midday"
+    if 12 <= hour < 16:
+        return "Afternoon"
+    if 16 <= hour < 20:
+        return "Evening Rush"
+    if 20 <= hour < 23:
+        return "Night"
     return "Late Night"
 
 def _day_night(hour):

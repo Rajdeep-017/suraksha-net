@@ -88,7 +88,6 @@ export default function App() {
         })
         .catch(() => {});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.start_coords, weatherData]);
 
   const handleAnalyze = async () => {

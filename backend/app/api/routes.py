@@ -1,5 +1,4 @@
 import os
-import json
 import asyncio
 import joblib
 import numpy as np
@@ -10,7 +9,7 @@ from pydantic import BaseModel
 
 from app.services.navigation import get_safer_route
 from app.services.chatbot import chat as groq_chat
-from app.services.weather import get_weather, get_road_condition_from_weather
+from app.services.weather import get_weather
 from app.services.websocket import manager as ws_manager, build_alert
 
 router = APIRouter()
@@ -56,11 +55,16 @@ def _safe_encode(encoder_key: str, value: str) -> int:
         return 0
 
 def _get_time_bin(hour: int) -> str:
-    if 6 <= hour < 10:   return "Morning Rush"
-    if 10 <= hour < 12:  return "Midday"
-    if 12 <= hour < 16:  return "Afternoon"
-    if 16 <= hour < 20:  return "Evening Rush"
-    if 20 <= hour < 23:  return "Night"
+    if 6 <= hour < 10:
+        return "Morning Rush"
+    if 10 <= hour < 12:
+        return "Midday"
+    if 12 <= hour < 16:
+        return "Afternoon"
+    if 16 <= hour < 20:
+        return "Evening Rush"
+    if 20 <= hour < 23:
+        return "Night"
     return "Late Night"
 
 def _get_day_night(hour: int) -> str:
@@ -352,7 +356,7 @@ async def admin_broadcast(data: BroadcastRequest):
 
     return {
         "status": "success",
-        "message": f"Broadcast sent to all drivers",
+        "message": "Broadcast sent to all drivers",
         "connected_drivers": ws_manager.connected_count,
     }
 

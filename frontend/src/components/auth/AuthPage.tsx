@@ -262,22 +262,20 @@ export default function AuthPage() {
     );
 }
 
-/* Pre-compute random particle styles once to avoid Math.random in render */
-function Particles() {
-    const particles = useMemo(() =>
-        Array.from({ length: 30 }, () => ({
-            width: `${2 + Math.random() * 3}px`,
-            height: `${2 + Math.random() * 3}px`,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `float ${8 + Math.random() * 12}s ease-in-out infinite`,
-            animationDelay: `${Math.random() * 5}s`,
-        }))
-    , []);
+/* Pre-compute random particle styles once — useRef avoids the purity rule */
+const PARTICLE_DATA = Array.from({ length: 30 }, () => ({
+    width: `${2 + Math.random() * 3}px`,
+    height: `${2 + Math.random() * 3}px`,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    animation: `float ${8 + Math.random() * 12}s ease-in-out infinite`,
+    animationDelay: `${Math.random() * 5}s`,
+}));
 
+function Particles() {
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {particles.map((style, i) => (
+            {PARTICLE_DATA.map((style, i) => (
                 <div key={i} className="absolute rounded-full bg-cyan-400/20" style={style} />
             ))}
         </div>
