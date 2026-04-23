@@ -16,7 +16,7 @@ export interface AccidentLocation {
   Road_Condition?: string;
   place_name?: string;   // reverse-geocoded street/locality name
   // Index signature allows access to any remaining CSV column
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface Segment {

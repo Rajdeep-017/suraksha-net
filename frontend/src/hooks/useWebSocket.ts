@@ -14,6 +14,9 @@ export function useWebSocket(sessionId: string, options: UseWebSocketOptions) {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reconnectAttempts = useRef(0);
 
+  // Store connect in a ref so the onclose callback always has the latest version
+  const connectRef = useRef<() => void>(() => {});
+
   const connect = useCallback(() => {
     if (!enabled || !sessionId) return;
 
@@ -49,7 +52,7 @@ export function useWebSocket(sessionId: string, options: UseWebSocketOptions) {
         if (enabled) {
           const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000);
           reconnectAttempts.current += 1;
-          reconnectTimeoutRef.current = setTimeout(connect, delay);
+          reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), delay);
         }
       };
 
@@ -62,6 +65,9 @@ export function useWebSocket(sessionId: string, options: UseWebSocketOptions) {
       // WebSocket not available
     }
   }, [enabled, sessionId, maxAlerts]);
+
+  // Keep the ref in sync with the latest connect function
+  connectRef.current = connect;
 
   useEffect(() => {
     if (enabled) {

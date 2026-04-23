@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, [user]);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const login = async (email: string, _password: string): Promise<boolean> => {
         // Mock login — always succeeds. Check localStorage for registered users.
         await new Promise(r => setTimeout(r, 400)); // fake network delay
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const register = async (email: string, name: string, _password: string, role: UserRole): Promise<boolean> => {
         await new Promise(r => setTimeout(r, 400));
         const newUser: AuthUser = { email, name, role, token: mockToken() };
@@ -82,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error('useAuth must be inside AuthProvider');

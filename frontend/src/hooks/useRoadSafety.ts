@@ -33,10 +33,11 @@ export function useRoadSafety() {
       setAccidents(rawData.accident_points ?? []);
       console.log('✅ Route analysis loaded:', transformedData);
       return transformedData;          // ← returned so App.tsx can chain navigateSafe
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
       const message =
-        err?.response?.data?.detail ||
-        err?.message ||
+        axiosErr?.response?.data?.detail ||
+        axiosErr?.message ||
         'Could not connect to the safety server.';
       console.error('❌ Route analysis failed:', err);
       setError(message);

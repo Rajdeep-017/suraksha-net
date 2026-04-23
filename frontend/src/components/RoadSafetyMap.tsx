@@ -98,7 +98,7 @@ export const RoadSafetyMap = ({
         />
 
         {/* ── Navigate routes: draw ALL routes from Mappls ── */}
-        {hasNavRoutes && navigateRoutes!.map((route, _idx) => {
+        {hasNavRoutes && navigateRoutes!.map((route) => {
           if (!route.geometry || route.geometry.length < 2) return null;
           const color = route.selected ? '#06b6d4' : ROUTE_COLORS[route.index % ROUTE_COLORS.length];
 

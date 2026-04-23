@@ -143,7 +143,7 @@ export interface WSAlert {
   severity: 'info' | 'warning' | 'critical';
   zone: string;
   timestamp: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 // ── API surface ───────────────────────────────────────────────────────────────

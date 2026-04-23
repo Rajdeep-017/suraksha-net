@@ -5,7 +5,7 @@ interface Props {
   level: string;
 }
 
-export const SafetyScoreCard = ({ score, level: _level }: Props) => {
+export const SafetyScoreCard = ({ score }: Props) => {
   // Derive tier from score (consistent with backend)
   const tier: 'safe' | 'moderate' | 'high' =
     score >= 70 ? 'safe' : score >= 40 ? 'moderate' : 'high';

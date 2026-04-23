@@ -66,13 +66,14 @@ export default function ChatWidget() {
                 ...prev,
                 { role: 'assistant', content: reply, route },
             ]);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { detail?: string } } };
             setMessages((prev) => [
                 ...prev,
                 {
                     role: 'assistant',
                     content:
-                        err?.response?.data?.detail ||
+                        axiosErr?.response?.data?.detail ||
                         'Sorry, something went wrong. Please try again.',
                 },
             ]);
@@ -212,9 +213,9 @@ function MessageContent({ text }: { text: string }) {
                 // Italic
                 processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
                 // Bullets
-                const isBullet = /^[\-•]\s/.test(processed.trim());
+                const isBullet = /^[-•]\s/.test(processed.trim());
                 if (isBullet) {
-                    processed = processed.replace(/^[\-•]\s*/, '');
+                    processed = processed.replace(/^[-•]\s*/, '');
                     return (
                         <div key={i} className="flex gap-1.5 items-start ml-1">
                             <span className="text-emerald-400 mt-1 shrink-0">•</span>

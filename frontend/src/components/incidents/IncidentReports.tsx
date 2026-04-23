@@ -129,7 +129,7 @@ function ReportForm({ onSubmit }: { onSubmit: (inc: IncidentRecord) => void }) {
                 <div className="grid grid-cols-3 gap-3">
                     <div>
                         <label className="text-[9px] text-slate-500 uppercase block mb-1">Severity</label>
-                        <select value={severity} onChange={e => setSeverity(e.target.value as any)}
+                        <select value={severity} onChange={e => setSeverity(e.target.value as 'Low' | 'Medium' | 'High')}
                             className="w-full bg-slate-800 border border-white/5 rounded-lg px-3 py-2 text-xs text-white outline-none">
                             <option>Low</option><option>Medium</option><option>High</option>
                         </select>

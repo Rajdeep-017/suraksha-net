@@ -15,7 +15,7 @@ interface StatisticsPanelProps {
     safety_score: number;
     risk_level: string;
     total_accidents: number;
-    high_risk_locations: any[];
+    high_risk_locations: { name: string; accidents: number }[];
     travel_time?: number; // Optional as per backend response
   };
 }

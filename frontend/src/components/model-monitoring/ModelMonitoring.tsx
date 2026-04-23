@@ -105,8 +105,9 @@ function PredictionTester() {
                 road_condition: road,
             });
             setResult(res.data);
-        } catch (e: any) {
-            setError(e?.response?.data?.detail || 'Prediction failed');
+        } catch (e: unknown) {
+            const axiosErr = e as { response?: { data?: { detail?: string } } };
+            setError(axiosErr?.response?.data?.detail || 'Prediction failed');
         }
         setLoading(false);
     };

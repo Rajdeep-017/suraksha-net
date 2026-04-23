@@ -24,6 +24,7 @@ export function useApiHealth() {
 
     // Check on mount, then every 30 s
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         check();
         const interval = setInterval(check, 30_000);
         return () => clearInterval(interval);
@@ -49,10 +50,11 @@ export function usePredictRisk() {
             const res = await safetyApi.predictRisk(payload);
             setResult(res.data);
             return res.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
             const msg =
-                err?.response?.data?.detail ||
-                err?.message ||
+                axiosErr?.response?.data?.detail ||
+                axiosErr?.message ||
                 'Prediction failed. Are ML models loaded?';
             setError(msg);
             return null;
@@ -82,10 +84,11 @@ export function useNavigateSafe() {
             const res = await safetyApi.navigateSafe(payload);
             setResult(res.data);
             return res.data;
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
             const msg =
-                err?.response?.data?.detail ||
-                err?.message ||
+                axiosErr?.response?.data?.detail ||
+                axiosErr?.message ||
                 'Navigation failed. Check MAPPLS_API_KEY in backend .env.';
             setError(msg);
             return null;

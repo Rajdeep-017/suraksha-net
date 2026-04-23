@@ -88,6 +88,7 @@ export function useLiveTracking(
 
     useEffect(() => {
         if (!enabled || !navigator.geolocation) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             if (!navigator.geolocation) setGeoError('Geolocation is not supported by this browser.');
             return;
         }
