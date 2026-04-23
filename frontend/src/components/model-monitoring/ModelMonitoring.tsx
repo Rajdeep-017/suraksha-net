@@ -4,7 +4,7 @@ import {
     LineChart, Line, CartesianGrid, ReferenceLine,
 } from 'recharts';
 import {
-    Cpu, Calendar, Layers, Target, Loader2, CheckCircle, AlertTriangle,
+    Cpu, Calendar, Layers, Target, Loader2, AlertTriangle,
 } from 'lucide-react';
 import {
     MODEL_METRICS, FEATURE_IMPORTANCE, CONFUSION_MATRIX, WEEKLY_ACCURACY,
@@ -256,7 +256,7 @@ export default function ModelMonitoring() {
                         <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#64748b' }} />
                         <YAxis domain={[0.7, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fontSize: 10, fill: '#64748b' }} />
                         <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, fontSize: 12 }}
-                            formatter={(v: number) => `${(v * 100).toFixed(1)}%`} />
+                            formatter={(v: number | undefined) => `${((v ?? 0) * 100).toFixed(1)}%`} />
                         <ReferenceLine y={driftThreshold} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Threshold', fill: '#f59e0b', fontSize: 10 }} />
                         <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: '#10b981' }} />
                     </LineChart>
