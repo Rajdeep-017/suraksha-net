@@ -1,6 +1,8 @@
 # ============================================
 # Suraksha-Net CD Pipeline
-# Builds & pushes Docker image to GHCR on main
+# Backend → Render (auto-deploy via git push)
+# Frontend → Vercel (auto-deploy via git push)
+# Docker image → GHCR (for self-hosting)
 # ============================================
 name: Deploy
 
@@ -19,9 +21,9 @@ jobs:
     name: Run CI checks
     uses: ./.github/workflows/ci.yml
 
-  # ── Build & Push to GHCR ───────────────────────
-  build-and-push:
-    name: Build & Push Image
+  # ── Build & Push Docker image to GHCR ──────────
+  docker-publish:
+    name: Publish Docker Image
     runs-on: ubuntu-latest
     needs: ci
     permissions:
@@ -67,14 +69,14 @@ jobs:
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend (Render)** | Auto-deploys on push to \`main\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Frontend (Vercel)** | Auto-deploys on push to \`main\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Docker (GHCR)** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Image** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Triggered by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pull the image" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 // ── Axios instance ────────────────────────────────────────────────────────────
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 export const apiClient = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

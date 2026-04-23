@@ -15,18 +15,23 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 app = FastAPI(title="Suraksha-Net AI", version="2.0.0")
 
 # --------------------------------------------------
-# 1. CORS – allow React dev server
+# 1. CORS – allow frontend origins (dev + production)
 # --------------------------------------------------
+_default_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
+]
+_env_origins = os.getenv("CORS_ORIGINS", "")
+_extra_origins = [o.strip() for o in _env_origins.split(",") if o.strip()]
+_all_origins = _default_origins + _extra_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:5175",
-    ],
+    allow_origins=_all_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

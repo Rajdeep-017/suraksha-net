@@ -1,0 +1,37 @@
+# ============================================
+# Render Blueprint — Backend API
+# https://render.com/docs/blueprint-spec
+# ============================================
+services:
+  - type: web
+    name: suraksha-net-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirments.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.12"
+      - key: PORT
+        value: "10000"
+      - key: DEBUG
+        value: "False"
+      # CORS — your Vercel frontend URL (set after first Vercel deploy)
+      - key: CORS_ORIGINS
+        sync: false  # manually set in Render dashboard
+      # Dataset path (upload CSV to Render disk or use hosted URL)
+      - key: ACCIDENTS_CSV_PATH
+        sync: false
+      # API keys — set these in the Render dashboard (Environment tab)
+      - key: MAPPLS_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+    healthCheckPath: /
+    autoDeploy: true

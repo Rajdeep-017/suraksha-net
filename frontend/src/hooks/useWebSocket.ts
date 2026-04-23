@@ -18,7 +18,10 @@ export function useWebSocket(sessionId: string, options: UseWebSocketOptions) {
     if (!enabled || !sessionId) return;
 
     try {
-      const ws = new WebSocket(`ws://127.0.0.1:8000/ws/alerts/${sessionId}`);
+      const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+      const wsProtocol = apiBase.startsWith('https') ? 'wss' : 'ws';
+      const wsHost = apiBase.replace(/^https?:\/\//, '');
+      const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/alerts/${sessionId}`);
 
       ws.onopen = () => {
         setConnected(true);
