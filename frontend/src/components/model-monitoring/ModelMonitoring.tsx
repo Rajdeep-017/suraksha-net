@@ -255,9 +255,9 @@ export default function ModelMonitoring() {
                     <LineChart data={WEEKLY_ACCURACY}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                         <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#64748b' }} />
-                        <YAxis domain={[0.7, 1]} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} tick={{ fontSize: 10, fill: '#64748b' }} />
+                        <YAxis domain={[0.7, 1]} tickFormatter={(v) => `${(Number(v) * 100).toFixed(0)}%`} tick={{ fontSize: 10, fill: '#64748b' }} />
                         <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, fontSize: 12 }}
-                            formatter={(v: number | string) => `${(Number(v) * 100).toFixed(1)}%`} />
+                            formatter={(v) => `${(Number(v) * 100).toFixed(1)}%`} />
                         <ReferenceLine y={driftThreshold} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Threshold', fill: '#f59e0b', fontSize: 10 }} />
                         <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: '#10b981' }} />
                     </LineChart>
